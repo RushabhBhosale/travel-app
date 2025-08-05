@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+import GoogleSignIn from "../components/GoogleSignIn";
 
 const SignInScreen = () => {
   const [email, setEmail] = useState("");
@@ -15,7 +16,7 @@ const SignInScreen = () => {
   const navigation = useNavigation();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>SignIn</Text>
+      <Text style={styles.title}>Sign In</Text>
 
       <TextInput
         autoCapitalize="none"
@@ -42,6 +43,7 @@ const SignInScreen = () => {
           <Text style={[styles.linkText, { color: "#FF5722" }]}>Sign Up</Text>
         </TouchableOpacity>
       </View>
+      <GoogleSignIn />
     </View>
   );
 };
