@@ -7,12 +7,74 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+import { useSignUp } from "@clerk/clerk-expo";
 
 const SignUpScreens = () => {
-  const [email, setEmail] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigation = useNavigation();
+  const { isLoaded, setActive, signUp } = useSignUp();
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [code, setCode] = useState("");
+
+  const onSignupPress = async () => {
+    if (!isLoaded) return;
+
+    try {
+      await signUp.create({
+        emailAddress,
+        password,
+      });
+
+      await signUp.prepareEmailAddressVerification({
+        strategy: "email_code",
+      });
+      setPendingVerification(true);
+    } catch (error: any) {
+      console.log("Error", error);
+      setError(error.errors[0]?.message || "Sign-up failed");
+    }
+  };
+
+  const onVerifyPress = async () => {
+    if (!isLoaded) return;
+
+    try {
+      const signUpAttempt = await signUp.attemptEmailAddressVerification({
+        code,
+      });
+
+      if (signUpAttempt.status == "complete") {
+        await setActive({ session: signUpAttempt.createdSessionId });
+      } else {
+        console.log("Error Verifying the user");
+        setError("Verification is incomplete. Please try again");
+      }
+    } catch (error: any) {
+      console.log("Verification Error", error);
+      setError(error.errors[0]?.message || "Verification failed");
+    }
+  };
+
+  if (pendingVerification) {
+    return (
+      <View style={styles.container}>
+        <Text>Verify your email</Text>
+        <TextInput
+          style={styles.input}
+          value={code}
+          onChangeText={setCode}
+          placeholder="Enter your verification code"
+        />
+        {error && <Text style={styles.error}>{error}</Text>}
+        <TouchableOpacity style={styles.button} onPress={onVerifyPress}>
+          <Text>Verify</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up</Text>
@@ -20,8 +82,8 @@ const SignUpScreens = () => {
       <TextInput
         autoCapitalize="none"
         placeholder="Enter email address"
-        onChangeText={setEmail}
-        value={email}
+        onChangeText={setEmailAddress}
+        value={emailAddress}
         style={styles.input}
       />
       <TextInput
@@ -32,7 +94,7 @@ const SignUpScreens = () => {
         style={styles.input}
       />
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity onPress={onSignupPress} style={styles.button}>
         <Text style={styles.buttonText}>Continue</Text>
       </TouchableOpacity>
 

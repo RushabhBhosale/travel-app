@@ -1,10 +1,5 @@
 import mongoose from "mongoose";
 
-const iternarySchema = new mongoose.Schema({
-  date: { type: String, required: true },
-  acctivities: [activitiesSchema],
-});
-
 const activitiesSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -43,6 +38,11 @@ const activitiesSchema = new mongoose.Schema({
       },
     },
   },
+});
+
+const iternarySchema = new mongoose.Schema({
+  date: { type: String, required: true },
+  acctivities: [activitiesSchema],
 });
 
 const placeSchema = new mongoose.Schema({
@@ -105,7 +105,7 @@ const expenseSchema = new mongoose.Schema({
 });
 
 const tripSchema = new mongoose.Schema({
-  trip: {
+  tripName: {
     type: String,
     required: true,
   },

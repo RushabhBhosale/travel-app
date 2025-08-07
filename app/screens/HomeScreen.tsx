@@ -12,6 +12,7 @@ import WeekendTrips from "../components/WeekendTrips";
 import FeaturedGuides from "../components/FeaturedGuides";
 import PopularDestinations from "../components/PopularDestinations";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 
 export type HomeStackParams = {
   HomeMain: undefined;
@@ -32,6 +33,7 @@ type HomeScreenNavigationProps = NativeStackNavigationProp<
 >;
 
 const HomeScreen = () => {
+  const navigation = useNavigation<HomeScreenNavigationProps>();
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1">
@@ -65,7 +67,10 @@ const HomeScreen = () => {
             <Text className="text-white text-4xl font-bold text-center px-6">
               Plan your next adventure
             </Text>
-            <TouchableOpacity className="bg-orange-500 px-6 py-2 mt-4 rounded-full">
+            <TouchableOpacity
+              onPress={() => navigation.navigate("NewTrip")}
+              className="bg-orange-500 px-6 py-2 mt-4 rounded-full"
+            >
               <Text className="text-white font-semibold text-base">
                 Create your trip plan
               </Text>
