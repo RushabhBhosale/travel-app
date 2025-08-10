@@ -17,7 +17,7 @@ const activitiesSchema = new mongoose.Schema({
     },
   ],
   type: [String],
-  formatted_string: {
+  formatted_address: {
     type: String,
     required: true,
   },
@@ -61,8 +61,8 @@ const placeSchema = new mongoose.Schema({
       text: String,
     },
   ],
-  type: [String],
-  formatted_string: {
+  types: [String],
+  formatted_address: {
     type: String,
     required: true,
   },

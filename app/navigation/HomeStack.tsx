@@ -4,11 +4,13 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../screens/HomeScreen";
 import NewTripScreen from "../screens/NewTripScreen";
 import PlanTripScreen from "../screens/PlanTripScreen";
+import AIChatScreen from "../screens/AIChatScreen";
 
 export type HomeStackParams = {
   HomeMain: undefined;
   NewTrip: undefined;
   PlanTrip: { trip: any };
+  AIChat: undefined;
 };
 
 const HomeStack = () => {
@@ -18,6 +20,7 @@ const HomeStack = () => {
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="NewTrip" component={NewTripScreen} />
       <Stack.Screen name="PlanTrip" component={PlanTripScreen} />
+      <Stack.Screen name="AIChat" component={AIChatScreen} />
     </Stack.Navigator>
   );
 };

@@ -38,7 +38,7 @@ const ProfileScreen = () => {
         return;
       }
 
-      const response = await axios.get("http://192.168.1.101:3000/api/trips", {
+      const response = await axios.get("http://192.168.0.104:3000/api/trips", {
         params: { clerkUserId },
       });
 
