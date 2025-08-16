@@ -38,7 +38,7 @@ const ProfileScreen = () => {
         return;
       }
 
-      const response = await axios.get("http://192.168.0.104:3000/api/trips", {
+      const response = await axios.get("http://192.168.0.101:3000/api/trips", {
         params: { clerkUserId },
       });
 
@@ -158,7 +158,7 @@ const ProfileScreen = () => {
               className="w-16 h-16 rounded-lg mr-3"
             />
             <View className="flex-1">
-              {trip.daysLeft && (
+              {typeof trip.daysLeft === "number" && trip.daysLeft > 0 && (
                 <Text className="text-xs bg-orange-100 px-2 py-0.5 rounded-full self-start font-semibold mb-1">
                   In {trip.daysLeft} days
                 </Text>

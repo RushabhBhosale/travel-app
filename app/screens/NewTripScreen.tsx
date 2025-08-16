@@ -144,7 +144,7 @@ const NewTripScreen = () => {
       };
 
       const response = await axios.post(
-        "http://192.168.0.104:3000/api/trips",
+        "http://192.168.0.101:3000/api/trips",
         tripData
       );
 

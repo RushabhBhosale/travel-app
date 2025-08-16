@@ -54,7 +54,7 @@ const AIChatScreen = () => {
           onPress: async () => {
             try {
               const response = await axios.post(
-                "http://192.168.0.104:3000/api/send-email",
+                "http://192.168.0.101:3000/api/send-email",
                 {
                   email,
                   subject: `Travel assistant Response from ${location}`,

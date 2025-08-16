@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "travel-app",
+    "scheme": "travelapp",
     "slug": "travel-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,9 +14,16 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rushabh.travelapp"
     },
     "android": {
+      "package": "com.rushabh.travelapp",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCOwvl1GwLyTUyJgaBAk8RHCN64bQQBsGk"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -26,8 +34,11 @@
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-web-browser"
-    ]
+    "plugins": ["expo-web-browser"],
+    "extra": {
+      "eas": {
+        "projectId": "03631ac6-9218-4a73-aad5-e49748f7dd58"
+      }
+    }
   }
 }

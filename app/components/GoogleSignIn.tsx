@@ -36,7 +36,7 @@ const GoogleSignIn = () => {
         redirectUrl: Linking.createURL("/"),
       });
 
-      if (createdSessionId) {
+      if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
       } else {
         setError("Google sigin-in incomplete. Please try again");

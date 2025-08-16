@@ -35,7 +35,7 @@ const PlanTripScreen = () => {
   const [modalMode, setModalMode] = useState<
     "place" | "expense" | "editExpense" | "ai"
   >("place");
-  const [activePlace, setActivePlace] = useState(null);
+  const [activePlace, setActivePlace] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [error, setError] = useState<any>("");
   const { getToken } = useAuth();
@@ -57,7 +57,7 @@ const PlanTripScreen = () => {
   ];
   const GOOGLE_API_KEY = "AIzaSyCOwvl1GwLyTUyJgaBAk8RHCN64bQQBsGk";
 
-  const getAverageRating = (reviews: any[]) => {
+  const getAverageRating = (reviews: any[]): any => {
     if (!reviews || reviews.length == 0) return 0;
     const total = reviews.reduce(
       (sum, review) => sum + (review.rating || 0),
@@ -74,12 +74,16 @@ const PlanTripScreen = () => {
 
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
-        stars.push(<Ionicons name="star" size={14} color={"#FFD700"} />);
+        stars.push(
+          <Ionicons key={i} name="star" size={14} color={"#FFD700"} />
+        );
       } else if (i === fullStars && halfStar) {
-        stars.push(<Ionicons name="star-half" size={14} color={"#FFD700"} />);
+        stars.push(
+          <Ionicons key={i} name="star-half" size={14} color={"#FFD700"} />
+        );
       } else {
         stars.push(
-          <Ionicons name="star-outline" size={14} color={"#FFD700"} />
+          <Ionicons key={i} name="star-outline" size={14} color={"#FFD700"} />
         );
       }
     }
@@ -109,7 +113,6 @@ const PlanTripScreen = () => {
   };
 
   const renderPlaceCard = (place: any, index: number) => {
-    console.log("j", place);
     const isActice = activePlace?.name == place?.name;
     return (
       <View
@@ -253,7 +256,7 @@ const PlanTripScreen = () => {
       const token = await getToken();
 
       const response = await axios.get(
-        `http://192.168.0.104:3000/api/trips/${trip._id}`,
+        `http://192.168.0.101:3000/api/trips/${trip._id}`,
         {
           params: { clerkUserId },
           headers: {
@@ -277,7 +280,6 @@ const PlanTripScreen = () => {
 
   const handleAddPlace = async (data: any) => {
     try {
-      console.log("first", data);
       const placeId = data.id;
       if (!placeId || !trip._id) {
         setError("place or trip id is required");
@@ -285,7 +287,7 @@ const PlanTripScreen = () => {
 
       const token = await getToken();
       await axios.post(
-        `http://192.168.0.104:3000/api/trips/${trip._id}/places`,
+        `http://192.168.0.101:3000/api/trips/${trip._id}/places`,
         { placeId },
         {
           headers: {
@@ -487,7 +489,14 @@ const PlanTripScreen = () => {
         >
           <MaterialIcons name="auto-awesome" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity className="w-12 h-12 rounded-full bg-black items-center justify-center shadow mt-2">
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("Map", {
+              places: trip?.placesToVisit || [],
+            })
+          }
+          className="w-12 h-12 rounded-full bg-black items-center justify-center shadow mt-2"
+        >
           <Ionicons name="map" size={24} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity className="w-12 h-12 rounded-full bg-black items-center justify-center shadow mt-2">
@@ -531,7 +540,6 @@ const PlanTripScreen = () => {
                     }
 
                     const d = json.result;
-                    console.log("d", JSON.stringify(d, null, 2));
                     const place = {
                       id: placeId,
                       name: d.name || "Unknown Place",
