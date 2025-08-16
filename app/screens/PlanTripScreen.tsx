@@ -296,7 +296,7 @@ const PlanTripScreen = () => {
       const token = await getToken();
 
       const response = await axios.get(
-        `http://192.168.0.101:3000/api/trips/${trip._id}`,
+        `https://travel-app-b0mb.onrender.com/api/trips/${trip._id}`,
         {
           params: { clerkUserId },
           headers: {
@@ -329,7 +329,7 @@ const PlanTripScreen = () => {
       const token = await getToken();
       console.log("paylll", token, placeId, trip._id);
       await axios.post(
-        `http://192.168.0.101:3000/api/trips/${trip._id}/places`,
+        `https://travel-app-b0mb.onrender.com/api/trips/${trip._id}/places`,
         { placeId },
         {
           headers: {
@@ -450,7 +450,7 @@ const PlanTripScreen = () => {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer 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`,
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -704,7 +704,7 @@ const PlanTripScreen = () => {
           : { placeData: place, date };
 
       await axios.post(
-        `http://192.168.0.101:3000/api/trips/${trip._id}/itinerary`,
+        `https://travel-app-b0mb.onrender.com/api/trips/${trip._id}/itinerary`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );

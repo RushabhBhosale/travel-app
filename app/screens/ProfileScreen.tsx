@@ -38,9 +38,12 @@ const ProfileScreen = () => {
         return;
       }
 
-      const response = await axios.get("http://192.168.0.101:3000/api/trips", {
-        params: { clerkUserId },
-      });
+      const response = await axios.get(
+        "https://travel-app-b0mb.onrender.com/api/trips",
+        {
+          params: { clerkUserId },
+        }
+      );
 
       const formattedTrips = response.data.trips.map((trip: any) => ({
         id: trip._id,

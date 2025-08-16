@@ -54,7 +54,7 @@ const AIChatScreen = () => {
           onPress: async () => {
             try {
               const response = await axios.post(
-                "http://192.168.0.101:3000/api/send-email",
+                "https://travel-app-b0mb.onrender.com/api/send-email",
                 {
                   email,
                   subject: `Travel assistant Response from ${location}`,
@@ -86,7 +86,7 @@ const AIChatScreen = () => {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer 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`,
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
