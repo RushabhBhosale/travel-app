@@ -7,7 +7,7 @@ import User from "./models/user.js";
 import Trip from "./models/trip.js";
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -391,12 +391,10 @@ app.post("/api/trips/:tripId/itinerary", async (req, res) => {
       );
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Activity added to itinerary successfully",
-        trip: updatedTrip,
-      });
+    res.status(200).json({
+      message: "Activity added to itinerary successfully",
+      trip: updatedTrip,
+    });
   } catch (error) {
     console.error("Error adding activity to itinerary:", error);
     res.status(500).json({ error: "Failed to add activity to itinerary" });

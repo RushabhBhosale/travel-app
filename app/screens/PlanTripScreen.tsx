@@ -1,12 +1,14 @@
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   RouteProp,
   useFocusEffect,
@@ -21,6 +23,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import Modal from "react-native-modal";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PlanTripScreen = () => {
   const navigation = useNavigation<any>();
@@ -39,6 +42,16 @@ const PlanTripScreen = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [error, setError] = useState<any>("");
   const { getToken } = useAuth();
+  const [expenses, setExpenses] = useState([]);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [expenseForm, setExpenseForm] = useState({
+    description: "",
+    category: "",
+    amount: "",
+    paidBy: "Rushabh Bhosale",
+    splitOption: "Dont split",
+  });
+
   const categories = [
     "Flight",
     "Lodging",
@@ -56,6 +69,28 @@ const PlanTripScreen = () => {
     { label: "Everyone", value: "Everyone" },
   ];
   const GOOGLE_API_KEY = "AIzaSyCOwvl1GwLyTUyJgaBAk8RHCN64bQQBsGk";
+
+  useEffect(() => {
+    const loadExpenses = async () => {
+      try {
+        const stored = await AsyncStorage.getItem("expenses");
+        if (stored) {
+          setExpenses(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.error("Error loading expenses", err);
+      }
+    };
+    loadExpenses();
+  }, []);
+
+  const saveExpenses = async (data: any) => {
+    try {
+      await AsyncStorage.setItem("expenses", JSON.stringify(data));
+    } catch (err) {
+      console.error("Error saving expenses", err);
+    }
+  };
 
   const getAverageRating = (reviews: any[]): any => {
     if (!reviews || reviews.length == 0) return 0;
@@ -327,15 +362,251 @@ const PlanTripScreen = () => {
     }));
   };
 
+  const handleAddExpense = () => {
+    if (
+      !expenseForm.description ||
+      !expenseForm.category ||
+      !expenseForm.amount
+    ) {
+      setError("Please fill all expense fields");
+      return;
+    }
+
+    const newExpense = {
+      id: Date.now().toString(),
+      ...expenseForm,
+      price: parseFloat(expenseForm.amount),
+      date: dayjs().format("YYYY-MM-DD"),
+    };
+
+    setExpenses((prev) => {
+      const updated = [...prev, newExpense];
+      saveExpenses(updated); // persist
+      return updated;
+    });
+    setExpenseForm({
+      description: "",
+      category: "",
+      amount: "",
+      paidBy: "Rushabh Bhosale",
+      splitOption: "Don't Split",
+    });
+    setModalVisible(false);
+    setModalMode("place");
+  };
+
+  const handleEditExpense = () => {
+    if (
+      !editingExpense ||
+      !expenseForm.description ||
+      !expenseForm.category ||
+      !expenseForm.amount
+    ) {
+      setError("Please fill all expense fields");
+      return;
+    }
+
+    setExpenses((prev: any) => {
+      const updated = prev.map((expense: any) =>
+        expense.id === editingExpense.id
+          ? {
+              ...expense,
+              ...expenseForm,
+              price: parseFloat(expenseForm.amount),
+            }
+          : expense
+      );
+      saveExpenses(updated); // persist
+      return updated;
+    });
+    setExpenseForm({
+      description: "",
+      category: "",
+      amount: "",
+      paidBy: "Rushabh Bhosale",
+      splitOption: "Don't Split",
+    });
+    setEditingExpense(null);
+    setModalVisible(false);
+    setModalMode("place");
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    setExpenses((prev) => {
+      const updated = prev.filter((expense) => expense.id !== id);
+      saveExpenses(updated); // persist
+      return updated;
+    });
+  };
+
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPlaces, setAiPlaces] = useState([]);
+  const fetchAIPlaces = async () => {
+    setAiLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer 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`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "mistralai/mistral-7b-instruct:free",
+            messages: [
+              {
+                role: "system",
+                content: `You are a travel assistant for ${
+                  trip.tripName || "a popular destination"
+                }. Return a JSON array of 5 objects, each representing a top place to visit. Each object must have exactly these fields: "name" (string), "description" (string, 50-100 words), "address" (string). Ensure the response is valid JSON, with no backticks, markdown, or extra text. Example: [{"name":"Place 1","description":"A beautiful place...","address":"123 Main St"}]`,
+              },
+              {
+                role: "user",
+                content: `List 5 top places to visit in ${
+                  trip.tripName || "a popular destination"
+                } in JSON format.`,
+              },
+            ],
+          }),
+        }
+      );
+
+      const data = await response.json();
+      let content = data?.choices?.[0]?.message?.content.trim();
+      content = content.replace(/```json\n?|\n?```/g, "");
+      const jsonMatch = content.match(/\[.*\]/s);
+      if (!jsonMatch) {
+        throw new Error("No valid JSON array found in response");
+      }
+      content = jsonMatch[0];
+
+      let places;
+      try {
+        places = JSON.parse(content);
+      } catch (error) {
+        console.log("Error parsing the content", error);
+      }
+
+      if (!Array.isArray(places) || places.length === 0) {
+        throw new Error("ai response missing required fields");
+      }
+
+      const placesWithDetails = await Promise.all(
+        places.map(async (place: any) => {
+          try {
+            const findPlaceUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(
+              `${place.name}, ${place.address}`
+            )}&inputtype=textquery&fields=place_id&key=${GOOGLE_API_KEY}`;
+            const findPlaceRes = await axios.get(findPlaceUrl);
+            const placeId = findPlaceRes.data.candidates?.[0]?.place_id;
+
+            if (!placeId) {
+              throw new Error(`No place_id found for ${place.name}`);
+            }
+
+            const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,photos,opening_hours,formatted_phone_number,website,geometry,types,reviews,editorial_summary&key=${GOOGLE_API_KEY}`;
+            const detailsRes = await axios.get(detailsUrl);
+            const d = detailsRes.data.result;
+
+            if (!d) {
+              throw new Error(`No details found for ${place.name}`);
+            }
+
+            return {
+              id: placeId,
+              name: d.name || place.name,
+              briefDescription:
+                d.editorial_summary?.overview?.slice(0, 200) + "..." ||
+                place.description?.slice(0, 200) + "..." ||
+                `Located in ${
+                  d.address_components?.[2]?.long_name ||
+                  d.formatted_address ||
+                  "this area"
+                }. A nice place to visit.`,
+              photos: d.photos?.map(
+                (photo: any) =>
+                  `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${GOOGLE_API_KEY}`
+              ) || ["https://via.placeholder.com/150"],
+              formatted_address: d.formatted_address || place.address,
+              openingHours: d.opening_hours?.weekday_text || [],
+              phoneNumber: d.formatted_phone_number || "",
+              website: d.website || "",
+              geometry: d.geometry || {
+                location: { lat: 0, lng: 0 },
+                viewport: {
+                  northeast: { lat: 0, lng: 0 },
+                  southwest: { lat: 0, lng: 0 },
+                },
+              },
+              types: d.types || ["point_of_interest"],
+              reviews:
+                d.reviews?.map((review: any) => ({
+                  authorName: review.author_name || "Unknown",
+                  rating: review.rating || 0,
+                  text: review.text || "",
+                })) || [],
+            };
+          } catch (err: any) {
+            console.warn(
+              `Failed to fetch details for ${place.name}:`,
+              err.message
+            );
+            return {
+              id: `ai-${place.name.replace(/\s/g, "-").toLowerCase()}`,
+              name: place.name,
+              briefDescription: place.description,
+              formatted_address: place.address,
+              photos: ["https://via.placeholder.com/150"],
+              types: ["point_of_interest"],
+              openingHours: [],
+              phoneNumber: "",
+              website: "",
+              geometry: {
+                location: { lat: 0, lng: 0 },
+                viewport: {
+                  northeast: { lat: 0, lng: 0 },
+                  southwest: { lat: 0, lng: 0 },
+                },
+              },
+              reviews: [],
+            };
+          }
+        })
+      );
+
+      setAiLoading(false);
+      setAiPlaces(placesWithDetails);
+      setModalMode("ai");
+      setModalVisible(true);
+    } catch (error: any) {
+      console.log("Error fetching ai places", error.message);
+      setError("Failed to fetch ai recommendations");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const renderItineraryTab = () => {
     const dates = generateTripDates();
     return (
       <ScrollView className="px-4 pt-4 bg-white">
-        <TouchableOpacity className="bg-blue-500 rounded-lg mb-4 items-center">
+        <TouchableOpacity
+          disabled={aiLoading}
+          onPress={fetchAIPlaces}
+          className="bg-blue-500 rounded-lg mb-4 items-center"
+        >
           <View className="flex-row items-center p-3 gap-2">
-            <MaterialIcons name="auto-awesome" color={"#fff"} size={20} />
+            {aiLoading ? (
+              <ActivityIndicator size="small" color={"#fff"} />
+            ) : (
+              <MaterialIcons name="auto-awesome" color={"#fff"} size={20} />
+            )}
             <Text className="text-white font-medium ml-2">
-              Use AI to create Itinerary
+              {aiLoading
+                ? "Fetching AI Suggestions"
+                : "Use AI to create Itinerary"}
             </Text>
           </View>
         </TouchableOpacity>
@@ -447,6 +718,92 @@ const PlanTripScreen = () => {
         error?.response?.data?.error || "Failed to add place to itinerary"
       );
     }
+  };
+
+  const renderExpenseTab = () => {
+    const total = expenses.reduce(
+      (sum, expenses) => sum + (expenses.price || expenseForm.amount || 0),
+      0
+    );
+
+    return (
+      <ScrollView className="px-4 pt-4 bg-white">
+        <View className="mb-6">
+          <Text className="text-2xl font-extrabold">Budget</Text>
+          <Text className="text-sm text-gray-500 mb-4">
+            Track your expenses for this trip{" "}
+          </Text>
+          <View className="bg-gray-100 p-4 rounded-lg mb-4">
+            <Text className="text-lg font-semibold">
+              Total: Rs. {total.toFixed(2)}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              setModalMode("expense");
+              setModalVisible(true);
+            }}
+            className="bg-blue-500 p-3 rounded-lg items-center"
+          >
+            <Text className="text-white font-medium">Add New Expense</Text>
+          </TouchableOpacity>
+        </View>
+        {expenses.map((expense: any, index) => (
+          <View key={index} className="mb-4 bg-gray-50 rounded-lg p-3 shadow">
+            <View className="flex-row justify-between">
+              <View>
+                <Text className="text-sm font-semibold">
+                  {expense.description}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  {expense.category}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  Paid by: {expense.paidBy}
+                </Text>
+                <Text className="text-xs text-gray-500">
+                  Split: {expense.splitOption}
+                </Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-sm font-semibold">
+                  ${(expense.price || expense.amount || 0).toFixed(2)}
+                </Text>
+                <Text className="text-xs text-gray-400">
+                  {dayjs(expense.date).format("MMM D, YYYY")}
+                </Text>
+              </View>
+            </View>
+            <View className="flex-row justify-end mt-2 space-x-2">
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingExpense(expense);
+                  setExpenseForm({
+                    description: expense.description,
+                    category: expense.category,
+                    amount: (expense.price || expense.amount || 0).toString(),
+                    paidBy: expense.paidBy,
+                    splitOption: expense.splitOption,
+                  });
+                  setModalMode("editExpense");
+                  setModalVisible(true);
+                }}
+                className="bg-blue-100 p-2 rounded"
+              >
+                <Ionicons name="pencil" size={16} color="#2563eb" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDeleteExpense(expense.id)}
+                className="bg-red-100 p-2 rounded"
+              >
+                <Ionicons name="trash" size={16} color="#dc2626" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    );
   };
 
   return (
@@ -625,6 +982,8 @@ const PlanTripScreen = () => {
       )}
 
       {selectedTab == "Itinerary" && renderItineraryTab()}
+
+      {selectedTab == "$" && renderExpenseTab()}
 
       <View className="absolute right-4 bottom-20 space-y-3 items-end">
         <TouchableOpacity
@@ -925,7 +1284,200 @@ const PlanTripScreen = () => {
                 </View>
               )}
             </>
-          ) : null}
+          ) : modalMode === "ai" ? (
+            <>
+              <Text>
+                {selectedDate
+                  ? `Add AI suggested place to ${dayjs(selectedDate).format(
+                      "ddd D/M"
+                    )}`
+                  : "Select a date for ai suggested places"}
+              </Text>
+
+              <Text className="text-sm font-semibold mt-2 mb-1">
+                Select Date
+              </Text>
+              <View className="flex-row gap-2 items-center">
+                {generateTripDates().map((date: any, idx: number) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => setSelectedDate(date.value)}
+                    className={`px-3 py-1.5 mr-2 rounded-full border ${
+                      selectedDate === date.value
+                        ? "bg-blue-500 border-b-blue-500"
+                        : "bg-white border-gray-300"
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-medium ${
+                        selectedDate === date.value
+                          ? "text-white"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {date.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {aiPlaces?.length > 0 && (
+                <View>
+                  <Text className="text-sm font-semibold mb-1">
+                    AI Suggested Places
+                  </Text>
+
+                  <ScrollView>
+                    {aiPlaces.map((place: any, idx: number) => (
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (selectedDate) {
+                            handleAddPlaceToItinerary(place, selectedDate);
+                          } else {
+                            setError("Please select a date to add this place");
+                          }
+                        }}
+                        key={idx}
+                        className="flex-row items-center p-2 border-b border-gray-200"
+                      >
+                        <Image
+                          className="size-12 rounded-md mr-2"
+                          source={{ uri: place?.photos[0] }}
+                        />
+                        <View className="">
+                          <Text className="text-sm font-medium">
+                            {place?.name}
+                          </Text>
+                          <Text className="text-xs text-gray-500">
+                            {place?.formatted_address}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              <Text className="text-lg font-semibold mb-4">
+                {modalMode === "editExpense"
+                  ? "Edit Expense"
+                  : "Add New Expense"}
+              </Text>
+              <ScrollView>
+                <Text className="text-sm font-medium mb-2">Description</Text>
+                <TextInput
+                  value={expenseForm.description}
+                  onChangeText={(text) =>
+                    setExpenseForm({ ...expenseForm, description: text })
+                  }
+                  placeholder="Enter expense description"
+                  className="bg-gray-200 p-3 rounded-lg mb-4"
+                />
+
+                <Text className="text-sm font-medium mb-2">Category</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="mb-4"
+                >
+                  {categories.map((category, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() =>
+                        setExpenseForm({ ...expenseForm, category })
+                      }
+                      className={`px-4 py-2 mr-2 rounded-lg ${
+                        expenseForm.category === category
+                          ? "bg-blue-500"
+                          : "bg-gray-100"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-medium ${
+                          expenseForm.category === category
+                            ? "text-white"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <Text className="text-sm font-medium mb-2">Amount</Text>
+                <TextInput
+                  value={expenseForm.amount}
+                  onChangeText={(text) =>
+                    setExpenseForm({ ...expenseForm, amount: text })
+                  }
+                  placeholder="Enter amount"
+                  keyboardType="numeric"
+                  className="bg-gray-100 p-3 rounded-lg mb-4"
+                />
+
+                <Text className="text-sm font-medium mb-2">Paid By</Text>
+                <TextInput
+                  value={expenseForm.paidBy}
+                  onChangeText={(text) =>
+                    setExpenseForm({ ...expenseForm, paidBy: text })
+                  }
+                  placeholder="Enter name"
+                  className="bg-gray-100 p-3 rounded-lg mb-4"
+                />
+
+                <Text className="text-sm font-medium mb-2">Split Option</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="mb-4"
+                >
+                  {splitOptions.map((option, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() =>
+                        setExpenseForm({
+                          ...expenseForm,
+                          splitOption: option.value,
+                        })
+                      }
+                      className={`px-4 py-2 mr-2 rounded-lg ${
+                        expenseForm.splitOption === option.value
+                          ? "bg-blue-500"
+                          : "bg-gray-100"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-medium ${
+                          expenseForm.splitOption === option.value
+                            ? "text-white"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <TouchableOpacity
+                  onPress={
+                    modalMode === "editExpense"
+                      ? handleEditExpense
+                      : handleAddExpense
+                  }
+                  className="bg-blue-500 p-3 rounded-lg items-center"
+                >
+                  <Text className="text-white font-medium">
+                    {modalMode === "editExpense"
+                      ? "Save Changes"
+                      : "Add Expense"}
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
