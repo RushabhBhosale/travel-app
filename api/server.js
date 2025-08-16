@@ -273,3 +273,132 @@ app.get("/api/trips/:tripId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch the trips" });
   }
 });
+
+app.post("/api/trips/:tripId/itinerary", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { placeId, date, placeData } = req.body;
+    const API_KEY = "AIzaSyCOwvl1GwLyTUyJgaBAk8RHCN64bQQBsGk";
+
+    if (!date) {
+      return res.status(400).json({ error: "Date is required" });
+    }
+    if (!placeId && !placeData) {
+      return res
+        .status(400)
+        .json({ error: "Either placeId or placeData is required" });
+    }
+
+    const trip = await Trip.findById(tripId);
+    if (!trip) {
+      return res.status(404).json({ error: "Trip not found" });
+    }
+
+    let activityData;
+
+    if (placeData) {
+      activityData = {
+        date,
+        name: placeData.name || "Unknown Place",
+        phoneNumber: placeData.phoneNumber || "",
+        website: placeData.website || "",
+        openingHours: placeData.openingHours || [],
+        photos: placeData.photos || [],
+        reviews: placeData.reviews || [],
+        types: placeData.types || [],
+        formatted_address:
+          placeData.formatted_address || "No address available",
+        briefDescription:
+          placeData.briefDescription || "No description available",
+        geometry: placeData.geometry || {
+          location: { lat: 0, lng: 0 },
+          viewport: {
+            northeast: { lat: 0, lng: 0 },
+            southwest: { lat: 0, lng: 0 },
+          },
+        },
+      };
+    } else {
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${API_KEY}`;
+      const response = await axios.get(url);
+      const { status, result: details } = response.data;
+
+      if (status !== "OK" || !details) {
+        return res
+          .status(400)
+          .json({ error: `Google Places API error: ${status}` });
+      }
+
+      activityData = {
+        date,
+        name: details.name || "Unknown Place",
+        phoneNumber: details.formatted_phone_number || "",
+        website: details.website || "",
+        openingHours: details.opening_hours?.weekday_text || [],
+        photos:
+          details.photos?.map(
+            (photo) =>
+              `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${API_KEY}`
+          ) || [],
+        reviews:
+          details.reviews?.map((review) => ({
+            authorName: review.author_name || "Unknown",
+            rating: review.rating || 0,
+            text: review.text || "",
+          })) || [],
+        types: details.types || [],
+        formatted_address: details.formatted_address || "No address available",
+        briefDescription:
+          details?.editorial_summary?.overview?.slice(0, 200) + "..." ||
+          details?.reviews?.[0]?.text?.slice(0, 200) + "..." ||
+          `Located in ${
+            details.address_components?.[2]?.long_name ||
+            details.formatted_address ||
+            "this area"
+          }. A nice place to visit.`,
+        geometry: {
+          location: {
+            lat: details.geometry?.location?.lat || 0,
+            lng: details.geometry?.location?.lng || 0,
+          },
+          viewport: {
+            northeast: {
+              lat: details.geometry?.viewport?.northeast?.lat || 0,
+              lng: details.geometry?.viewport?.northeast?.lng || 0,
+            },
+            southwest: {
+              lat: details.geometry?.viewport?.southwest?.lat || 0,
+              lng: details.geometry?.viewport?.southwest?.lng || 0,
+            },
+          },
+        },
+      };
+    }
+
+    const existingItinerary = trip.itinerary.find((item) => item.date === date);
+    let updatedTrip;
+    if (existingItinerary) {
+      updatedTrip = await Trip.findByIdAndUpdate(
+        tripId,
+        { $push: { "itinerary.$[elem].activities": activityData } },
+        { arrayFilters: [{ "elem.date": date }], new: true }
+      );
+    } else {
+      updatedTrip = await Trip.findByIdAndUpdate(
+        tripId,
+        { $push: { itinerary: { date, activities: [activityData] } } },
+        { new: true }
+      );
+    }
+
+    res
+      .status(200)
+      .json({
+        message: "Activity added to itinerary successfully",
+        trip: updatedTrip,
+      });
+  } catch (error) {
+    console.error("Error adding activity to itinerary:", error);
+    res.status(500).json({ error: "Failed to add activity to itinerary" });
+  }
+});

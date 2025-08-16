@@ -42,7 +42,7 @@ const activitiesSchema = new mongoose.Schema({
 
 const iternarySchema = new mongoose.Schema({
   date: { type: String, required: true },
-  acctivities: [activitiesSchema],
+  activities: [activitiesSchema],
 });
 
 const placeSchema = new mongoose.Schema({

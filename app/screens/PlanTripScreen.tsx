@@ -112,57 +112,64 @@ const PlanTripScreen = () => {
     ));
   };
 
-  const renderPlaceCard = (place: any, index: number) => {
-    const isActice = activePlace?.name == place?.name;
+  const renderPlaceCard = (
+    place: any,
+    index: number,
+    isItinerary: boolean = false
+  ) => {
+    const isActive = activePlace?.name === place.name;
     return (
       <View
         key={index}
         className="mb-4 bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
       >
         <TouchableOpacity
-          onPress={() => setActivePlace(isActice ? null : place)}
+          onPress={() => setActivePlace(isActive ? null : place)}
           className="flex-row items-center"
         >
           <Image
-            className="size-24 rounded-l-xl"
-            source={{ uri: place?.photos[0] }}
+            source={{
+              uri: place.photos?.[0] || "https://via.placeholder.com/150",
+            }}
+            className="w-24 h-24 rounded-l-xl"
+            resizeMode="cover"
           />
           <View className="flex-1 p-3">
-            <Text className="text-base text-gray-600 font-bold mb-1">
-              {place.name}
+            <Text className="text-gray-800 font-bold text-base mb-1">
+              {place.name || "Unknown Place"}
             </Text>
             <Text className="text-gray-600 text-sm leading-5" numberOfLines={2}>
-              {place.briefDescription || "No Description"}
+              {place.briefDescription || "No description available"}
             </Text>
             <View className="flex-row items-center mt-1">
               {renderStars(getAverageRating(place.reviews))}
               <Text className="text-xs text-gray-500 ml-1">
-                ({getAverageRating(place.reviews)} / 5)
+                ({getAverageRating(place.reviews)}/5)
               </Text>
             </View>
           </View>
         </TouchableOpacity>
 
-        {isActice && (
+        {isActive && (
           <View className="p-4 bg-gray-50 border-t border-gray-200">
             <View className="mb-4">
               <View className="flex-row items-center">
-                <Ionicons name="location" size={15} color={"#4B5563"} />
-                <Text className="text-sm text-gray-700 font-semibold ml-1">
+                <Ionicons name="location" size={16} color="#4B5563" />
+                <Text className="text-sm font-semibold text-gray-700 ml-1">
                   Address
                 </Text>
               </View>
               <Text className="text-sm text-gray-600 mt-1">
-                {place.formatted_address}
+                {place.formatted_address || "No address available"}
               </Text>
             </View>
 
-            {place?.openingHours.length > 0 && (
+            {place.openingHours?.length > 0 && (
               <View className="mb-4">
                 <View className="flex-row items-center">
-                  <Ionicons name="time" size={15} color={"#4B5563"} />
-                  <Text className="text-sm text-gray-700 font-semibold ml-1">
-                    Opening Hours
+                  <Ionicons name="time" size={16} color="#4B5563" />
+                  <Text className="text-sm font-semibold text-gray-700 mlinant">
+                    Today’s Hours
                   </Text>
                 </View>
                 <Text className="text-sm text-gray-600 mt-1">
@@ -171,11 +178,11 @@ const PlanTripScreen = () => {
               </View>
             )}
 
-            {place?.phoneNumber && (
+            {place.phoneNumber && (
               <View className="mb-4">
                 <View className="flex-row items-center">
-                  <Ionicons name="call" size={15} color={"#4B5563"} />
-                  <Text className="text-sm text-gray-700 font-semibold ml-1">
+                  <Ionicons name="call" size={16} color="#4B5563" />
+                  <Text className="text-sm font-semibold text-gray-700 ml-1">
                     Phone
                   </Text>
                 </View>
@@ -185,56 +192,54 @@ const PlanTripScreen = () => {
               </View>
             )}
 
-            {place?.website && (
+            {place.website && (
               <View className="mb-4">
                 <View className="flex-row items-center">
-                  <Ionicons name="globe" size={15} color={"#4B5563"} />
-                  <Text className="text-sm text-gray-700 font-semibold ml-1">
+                  <Ionicons name="globe" size={16} color="#4B5563" />
+                  <Text className="text-sm font-semibold text-gray-700 ml-1">
                     Website
                   </Text>
                 </View>
                 <Text
-                  className="text-sm text-blue-500 underline mt-1"
-                  numberOfLines={2}
+                  className="text-sm text-blue-600 underline mt-1"
+                  numberOfLines={1}
                 >
                   {place.website}
                 </Text>
               </View>
             )}
 
-            {place?.reviews.length > 0 && (
+            {place.reviews?.length > 0 && (
               <View className="mb-4">
                 <View className="flex-row items-center">
-                  <Ionicons name="star" size={15} color={"#4B5563"} />
-                  <Text className="text-sm text-gray-700 font-semibold ml-1">
-                    Reviews
-                  </Text>
-                </View>
-
-                <View className="flex-row items-center mt-1">
-                  {renderStars(place.reviews[0].rating)}
-                  <Text className="text-xs text-gray-500 ml-1">
-                    {" "}
-                    - {place.reviews[0].authorName} ({place.reviews[0].rating} /
-                    5)
+                  <Ionicons name="star" size={16} color="#4B5563" />
+                  <Text className="text-sm font-semibold text-gray-700 ml-1">
+                    Review
                   </Text>
                 </View>
                 <Text className="text-sm text-gray-600 italic mt-1">
-                  "{place.reviews[0].text.slice(0, 100)}" "
+                  "{place.reviews[0].text.slice(0, 100)}
                   {place.reviews[0].text.length > 100 ? "..." : ""}"
                 </Text>
+                <View className="flex-row items-center mt-1">
+                  {renderStars(place.reviews[0].rating)}
+                  <Text className="text-xs text-gray-500 ml-1">
+                    — {place.reviews[0].authorName} ({place.reviews[0].rating}
+                    /5)
+                  </Text>
+                </View>
               </View>
             )}
 
-            {place?.types?.length > 0 && (
-              <View className="mb-4">
+            {place.types?.length > 0 && (
+              <View>
                 <View className="flex-row items-center">
-                  <Ionicons name="pricetag" size={15} color={"#4B5563"} />
-                  <Text className="text-sm text-gray-700 font-semibold ml-1">
+                  <Ionicons name="pricetag" size={16} color="#4B5563" />
+                  <Text className="text-sm font-semibold text-gray-700 ml-1">
                     Categories
                   </Text>
                 </View>
-                <View className="flex-wrap flex-row mt-2">
+                <View className="flex-row flex-wrap mt-1">
                   {renderPlaceTypes(place.types)}
                 </View>
               </View>
@@ -280,12 +285,14 @@ const PlanTripScreen = () => {
 
   const handleAddPlace = async (data: any) => {
     try {
-      const placeId = data.id;
+      console.log("data", data);
+      const placeId = data.place_id;
       if (!placeId || !trip._id) {
         setError("place or trip id is required");
       }
 
       const token = await getToken();
+      console.log("paylll", token, placeId, trip._id);
       await axios.post(
         `http://192.168.0.101:3000/api/trips/${trip._id}/places`,
         { placeId },
@@ -304,6 +311,144 @@ const PlanTripScreen = () => {
       setError(error.response.data.error);
     }
   };
+
+  const generateTripDates = () => {
+    const start = dayjs(trip.startDate || new Date());
+    const end = dayjs(trip.endDate || new Date());
+    const days = [];
+
+    for (let d = start; d.isBefore(end) || d.isSame(end); d = d.add(1, "day")) {
+      days.push(d);
+    }
+
+    return days.map((d) => ({
+      label: d.format("ddd D/M"),
+      value: d.format("YYYY-MM-DD"),
+    }));
+  };
+
+  const renderItineraryTab = () => {
+    const dates = generateTripDates();
+    return (
+      <ScrollView className="px-4 pt-4 bg-white">
+        <TouchableOpacity className="bg-blue-500 rounded-lg mb-4 items-center">
+          <View className="flex-row items-center p-3 gap-2">
+            <MaterialIcons name="auto-awesome" color={"#fff"} size={20} />
+            <Text className="text-white font-medium ml-2">
+              Use AI to create Itinerary
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <View className="flex-row mb-4">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {dates?.map((date: any, idx) => (
+              <TouchableOpacity
+                onPress={() => setSelectedDate(date.value)}
+                className={`px-4 py-2 mr-2 rounded-lg ${
+                  selectedDate === date.value ? "bg-blue-500" : "bg-gray-100"
+                }`}
+                key={idx}
+              >
+                <Text
+                  className={`font-semibold text-sm ${
+                    selectedDate === date.value ? "text-white" : "text-gray-700"
+                  }`}
+                >
+                  {date.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {dates.map((date, index) => {
+          const itineraryForDate = (trip.itinerary || []).find(
+            (item: any) => item.date === date.value
+          );
+
+          const activities = itineraryForDate?.activities || [];
+
+          return (
+            <View key={index} className="mb-8">
+              <View className="flex-row items-center mb-2">
+                <Text className="text-2xl font-extrabold mr-2">
+                  {date.label}
+                </Text>
+                <Text className="text-gray-400 font-medium">
+                  Add Subheading
+                </Text>
+              </View>
+              <View className="flex-row items-center mb-2 gap-2">
+                <Text className="text-blue-600 text-sm font-semibold">
+                  Auto Fill day
+                </Text>
+                <Text className="text-blue-600 text-sm font-semibold">
+                  Optimized route
+                </Text>
+                <Text className="text-xs bg-orange-400 text-white px-1.5 py-0.5 rounded">
+                  Pro
+                </Text>
+              </View>
+
+              {activities.length > 0 ? (
+                activities.map((place: any, idx: number) =>
+                  renderPlaceCard(place, idx, true)
+                )
+              ) : (
+                <Text className="text-sm text-gray-500 mb-3">
+                  No activities added for this date
+                </Text>
+              )}
+
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedDate(date.value);
+                  setModalMode("place");
+                  setModalVisible(true);
+                }}
+                className="flex-row items-center bg-gray-100 rounded-lg px-4 py-3 mb-3"
+              >
+                <Ionicons name="location-outline" color={"#777"} size={18} />
+                <Text className="ml-2 text-gray-500">Add a place</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
+  const handleAddPlaceToItinerary = async (place: any, date: string) => {
+    try {
+      if (!trip._id || !place) {
+        setError("TripId or place is missing");
+        return;
+      }
+
+      const token = await getToken();
+      const payload =
+        place.id || place.place_id
+          ? { placeId: place.id || place.place_id, date }
+          : { placeData: place, date };
+
+      await axios.post(
+        `http://192.168.0.101:3000/api/trips/${trip._id}/itinerary`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      await fetchTrips();
+      setModalVisible(false);
+      setSelectedDate(null);
+    } catch (error: any) {
+      console.log("Error add place to itinerary", error);
+      setError(
+        error?.response?.data?.error || "Failed to add place to itinerary"
+      );
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="relative w-full h-48">
@@ -478,6 +623,9 @@ const PlanTripScreen = () => {
           </View>
         </ScrollView>
       )}
+
+      {selectedTab == "Itinerary" && renderItineraryTab()}
+
       <View className="absolute right-4 bottom-20 space-y-3 items-end">
         <TouchableOpacity
           onPress={() =>
@@ -513,15 +661,12 @@ const PlanTripScreen = () => {
         }}
         style={{ justifyContent: "flex-end", margin: 0 }}
       >
-        {modalMode == "place" && selectedDate !== "Itinerary" ? (
-          <>
-            <View className="bg-white p-4 rounded-t-2xl h-[60%]">
-              <Text>
-                {selectedDate
-                  ? `Add Place to ${dayjs(selectedDate).format("ddd D/M")}`
-                  : "Search for a place"}
+        <View className="bg-white p-4 rounded-t-xl h-[60%]">
+          {modalMode === "place" && selectedTab !== "Itinerary" ? (
+            <>
+              <Text className="text-lg font-semibold mb-4">
+                Search for a place
               </Text>
-
               <GooglePlacesAutocomplete
                 placeholder="Search for a place"
                 fetchDetails={true}
@@ -535,7 +680,107 @@ const PlanTripScreen = () => {
 
                     if (json.status !== "OK" || !json.result) {
                       throw new Error(
-                        `Google places api error ${json.status} || "No res found`
+                        `Google Places API error: ${
+                          json.status || "No result found"
+                        }`
+                      );
+                    }
+
+                    const d = json.result;
+                    const place = {
+                      id: placeId,
+                      name: d.name || "Unknown Place",
+                      briefDescription:
+                        d.editorial_summary?.overview?.slice(0, 200) + "..." ||
+                        d.reviews?.[0]?.text?.slice(0, 200) + "..." ||
+                        `Located in ${
+                          d.address_components?.[2]?.long_name ||
+                          d.formatted_address ||
+                          "this area"
+                        }. A nice place to visit.`,
+                      photos:
+                        d.photos?.map(
+                          (photo: any) =>
+                            `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${GOOGLE_API_KEY}`
+                        ) || [],
+                      formatted_address:
+                        d.formatted_address || "No address available",
+                      openingHours: d.opening_hours?.weekday_text || [],
+                      phoneNumber: d.formatted_phone_number || "",
+                      website: d.website || "",
+                      geometry: d.geometry || {
+                        location: { lat: 0, lng: 0 },
+                        viewport: {
+                          northeast: { lat: 0, lng: 0 },
+                          southwest: { lat: 0, lng: 0 },
+                        },
+                      },
+                      types: d.types || [],
+                      reviews:
+                        d.reviews?.map((review: any) => ({
+                          authorName: review.author_name || "Unknown",
+                          rating: review.rating || 0,
+                          text: review.text || "",
+                        })) || [],
+                    };
+
+                    await handleAddPlace(data);
+                  } catch (error: any) {
+                    console.error("Place detail error:", error.message);
+                    setError(`Failed to fetch place details: ${error.message}`);
+                  }
+                }}
+                query={{
+                  key: GOOGLE_API_KEY,
+                  language: "en",
+                }}
+                styles={{
+                  container: { flex: 0 },
+                  textInputContainer: {
+                    flexDirection: "row",
+                    backgroundColor: "#f1f1f1",
+                    borderRadius: 30,
+                    paddingHorizontal: 10,
+                    alignItems: "center",
+                  },
+                  textInput: {
+                    flex: 1,
+                    height: 44,
+                    color: "#333",
+                    fontSize: 16,
+                    backgroundColor: "#f1f1f1",
+                    borderRadius: 25,
+                  },
+                  listView: {
+                    marginTop: 10,
+                    backgroundColor: "#fff",
+                  },
+                }}
+              />
+            </>
+          ) : modalMode === "place" && selectedTab === "Itinerary" ? (
+            <>
+              <Text className="text-lg font-semibold my-2">
+                {selectedDate
+                  ? `Add a place to ${dayjs(selectedDate).format("ddd D/M")}`
+                  : "Search for a place"}
+              </Text>
+              <GooglePlacesAutocomplete
+                placeholder="Search for a place"
+                fetchDetails={true}
+                enablePoweredByContainer={false}
+                onPress={async (data, details = null) => {
+                  try {
+                    const placeId = data.place_id;
+                    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_API_KEY}`;
+                    const res = await fetch(url);
+                    const json = await res.json();
+
+                    if (json.status !== "OK" || !json.result) {
+                      throw new Error(
+                        `Google Places API error: ${
+                          json.status || "No result found"
+                        }`
                       );
                     }
 
@@ -578,12 +823,15 @@ const PlanTripScreen = () => {
                     };
 
                     if (selectedDate) {
-                      await handlePlaceToItinerary(place, selectedDate);
+                      await handleAddPlaceToItinerary(place, selectedDate);
                     } else {
-                      await handleAddPlace(place);
+                      setError(
+                        "Please select a date to add this place to the itinerary"
+                      );
                     }
-                  } catch (error) {
-                    console.log("Error", error);
+                  } catch (error: any) {
+                    console.error("Place detail error:", error.message);
+                    setError(`Failed to fetch place details: ${error.message}`);
                   }
                 }}
                 query={{
@@ -591,9 +839,7 @@ const PlanTripScreen = () => {
                   language: "en",
                 }}
                 styles={{
-                  container: {
-                    flex: 0,
-                  },
+                  container: { flex: 0 },
                   textInputContainer: {
                     flexDirection: "row",
                     backgroundColor: "#f1f1f1",
@@ -615,11 +861,72 @@ const PlanTripScreen = () => {
                   },
                 }}
               />
-            </View>
-          </>
-        ) : (
-          ""
-        )}
+
+              <Text className="text-sm font-semibold mb-1 mt-2">
+                Select Date
+              </Text>
+              <View className="flex-row gap-2 items-center">
+                {generateTripDates().map((date: any, idx: number) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => setSelectedDate(date.value)}
+                    className={`px-3 py-1.5 mr-2 rounded-full border ${
+                      selectedDate === date.value
+                        ? "bg-blue-500 border-b-blue-500"
+                        : "bg-white border-gray-300"
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-medium ${
+                        selectedDate === date.value
+                          ? "text-white"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {date.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {(trip?.placesToVisit || []).length > 0 && (
+                <View className="flex-1 mt-2">
+                  <Text className="text-sm font-semibold mb-1">
+                    Previously Added Places
+                  </Text>
+                  <ScrollView className="flex-1">
+                    {trip?.placesToVisit.map((place: any, idx: number) => (
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (selectedDate) {
+                            handleAddPlaceToItinerary(place, selectedDate);
+                          } else {
+                            setError("Please select a date to add this place");
+                          }
+                        }}
+                        key={idx}
+                        className="flex-row items-center p-2 border-b border-gray-200"
+                      >
+                        <Image
+                          className="size-12 rounded-md mr-2"
+                          source={{ uri: place?.photos[0] }}
+                        />
+                        <View className="">
+                          <Text className="text-sm font-medium">
+                            {place?.name}
+                          </Text>
+                          <Text className="text-xs text-gray-500">
+                            {place?.formatted_address}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          ) : null}
+        </View>
       </Modal>
     </SafeAreaView>
   );
