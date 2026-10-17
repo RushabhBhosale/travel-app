@@ -60,5 +60,16 @@ target 'travelapp' do
         end
       end
     end
+
+    # Newer Xcode versions reject pod targets below iOS 15 (some resource bundles default to 9.0).
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.1
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
+        # fmt 11 doesn't compile as C++20 with newer clang (consteval errors).
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17' if target.name == 'fmt'
+      end
+    end
   end
 end

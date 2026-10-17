@@ -35,3 +35,8 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# env files with secrets
+.env
+api/.env
+api/node_modules/

@@ -1,120 +1,89 @@
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import React, { useState } from "react";
-import { useNavigation } from "@react-navigation/native";
-import GoogleSignIn from "../components/GoogleSignIn";
+import React, { useRef, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
+import AuthLayout from "../components/AuthLayout";
+import GoogleSignIn from "../components/GoogleSignIn";
+import Button from "../components/ui/Button";
+import TextField from "../components/ui/TextField";
+import type { ScreenProps } from "../navigation/types";
 
-const SignInScreen = () => {
+const clerkMessage = (err: any, fallback: string) =>
+  err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || fallback;
+
+const SignInScreen = ({ navigation }: ScreenProps<"SignIn">) => {
   const { signIn, setActive, isLoaded } = useSignIn();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const navigation = useNavigation<any>();
+  const [loading, setLoading] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
 
-  const onSignInPress = async () => {
-    if (!isLoaded) return;
+  const onSignIn = async () => {
+    if (!isLoaded || loading) return;
+    if (!email.trim() || !password) return setError("Enter your email and password.");
+    setLoading(true);
+    setError("");
     try {
-      const signInAttempt = await signIn.create({
-        identifier: email,
-        password,
-      });
-
-      if (signInAttempt.status == "complete") {
-        await setActive({ session: signInAttempt.createdSessionId });
+      const attempt = await signIn.create({ identifier: email.trim(), password });
+      if (attempt.status === "complete") {
+        await setActive({ session: attempt.createdSessionId });
       } else {
-        console.log("Sign-in failed", JSON.stringify(signInAttempt, null, 2));
-        setError("Sign-In failed. Please try again");
+        setError("Additional verification is required. Please use Google or reset your password.");
       }
-    } catch (error: any) {
-      console.log("Sign-In Error", error);
-      setError(error.errors[0]?.message || "Sign-In failed");
+    } catch (err) {
+      setError(clerkMessage(err, "Sign in failed. Please try again."));
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Sign In</Text>
-
-      <TextInput
+    <AuthLayout title="Welcome back" subtitle="Sign in to continue planning your trips.">
+      <TextField
+        label="Email"
+        icon="mail-outline"
         autoCapitalize="none"
-        placeholder="Enter email address"
-        onChangeText={setEmail}
+        autoComplete="email"
+        keyboardType="email-address"
+        placeholder="you@example.com"
         value={email}
-        style={styles.input}
+        onChangeText={setEmail}
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+        containerClassName="mb-4"
       />
-      <TextInput
-        secureTextEntry
-        placeholder="Enter password"
-        onChangeText={setPassword}
+      <TextField
+        ref={passwordRef}
+        label="Password"
+        icon="lock-closed-outline"
+        password
+        autoComplete="password"
+        placeholder="Your password"
         value={password}
-        style={styles.input}
+        onChangeText={setPassword}
+        returnKeyType="go"
+        onSubmitEditing={onSignIn}
       />
+      {!!error && <Text className="mt-3 text-sm text-red-600">{error}</Text>}
 
-      <TouchableOpacity onPress={onSignInPress} style={styles.button}>
-        <Text style={styles.buttonText}>Continue</Text>
-      </TouchableOpacity>
+      <Button title="Sign in" size="lg" loading={loading} onPress={onSignIn} className="mt-6" />
 
-      <View style={styles.linkContainer}>
-        <Text style={styles.linkText}>Don't have an account?</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-          <Text style={[styles.linkText, { color: "#FF5722" }]}>Sign Up</Text>
-        </TouchableOpacity>
+      <View className="my-5 flex-row items-center">
+        <View className="h-px flex-1 bg-slate-200" />
+        <Text className="mx-3 text-xs font-medium text-slate-400">OR</Text>
+        <View className="h-px flex-1 bg-slate-200" />
       </View>
-      <GoogleSignIn />
-    </View>
+
+      <GoogleSignIn onError={setError} />
+
+      <View className="mt-6 flex-row justify-center">
+        <Text className="text-sm text-slate-500">New here? </Text>
+        <Pressable hitSlop={8} onPress={() => navigation.navigate("SignUp")}>
+          <Text className="text-sm font-bold text-brand">Create an account</Text>
+        </Pressable>
+      </View>
+    </AuthLayout>
   );
 };
 
 export default SignInScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  input: {
-    width: "100%",
-    padding: 12,
-    marginVertical: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-  },
-  button: {
-    backgroundColor: "#FF5722",
-    padding: 12,
-    borderRadius: 5,
-    width: "100%",
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  linkContainer: {
-    flexDirection: "row",
-    marginTop: 20,
-  },
-  linkText: {
-    fontSize: 16,
-  },
-  error: {
-    color: "red",
-    marginBottom: 10,
-  },
-});

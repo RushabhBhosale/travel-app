@@ -1,15 +1,12 @@
-import {
-  ActivityIndicator,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
 import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
-import { useOAuth } from "@clerk/clerk-expo";
+import * as AuthSession from "expo-auth-session";
+import { useSSO } from "@clerk/clerk-expo";
+import { colors } from "../theme";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const useWarmUpBrowser = () => {
   useEffect(() => {
@@ -20,64 +17,43 @@ const useWarmUpBrowser = () => {
   }, []);
 };
 
-const GoogleSignIn = () => {
+const GoogleSignIn = ({ onError }: { onError: (message: string) => void }) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
-
+  const { startSSOFlow } = useSSO();
   useWarmUpBrowser();
 
-  const onGoogleSignInPress = useCallback(async () => {
+  const onPress = useCallback(async () => {
     setLoading(true);
-    setError("");
-
+    onError("");
     try {
-      const { createdSessionId, setActive } = await startOAuthFlow({
-        redirectUrl: Linking.createURL("/"),
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: "oauth_google",
+        redirectUrl: AuthSession.makeRedirectUri({ scheme: "travelapp" }),
       });
-
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-      } else {
-        setError("Google sigin-in incomplete. Please try again");
-      }
-    } catch (error: any) {
-      console.log("Error", error);
-      setError(error.errors[0]?.message || "Google sign-in failed");
+      if (createdSessionId && setActive) await setActive({ session: createdSessionId });
+    } catch (err: any) {
+      onError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || "Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startSSOFlow, onError]);
 
   return (
-    <View className="w-full">
-      {error ? (
-        <Text className="text-red-500 mb-3 text-sm">{error}</Text>
-      ) : null}
-
-      <TouchableOpacity
-        onPress={onGoogleSignInPress}
-        className="w-full border border-gray-300 py-3 mt-3 rounded-lg flex-row items-center justify-center
-      "
-      >
-        {loading ? (
-          <ActivityIndicator color="#FF5722" />
-        ) : (
-          <>
-            <Image
-              source={{ uri: "https://www.google.com/favicon.ico" }}
-              className="size-5 mr-2"
-            />
-            <Text className="text-gray-900 text-base font-semibold">
-              Sign In with Google
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </View>
+    <Pressable
+      onPress={onPress}
+      disabled={loading}
+      className="h-12 w-full flex-row items-center justify-center rounded-2xl border border-slate-200 bg-white active:opacity-70"
+    >
+      {loading ? (
+        <ActivityIndicator color={colors.brand} />
+      ) : (
+        <View className="flex-row items-center">
+          <Ionicons name="logo-google" size={18} color="#EA4335" />
+          <Text className="ml-2.5 text-[15px] font-semibold text-slate-800">Continue with Google</Text>
+        </View>
+      )}
+    </Pressable>
   );
 };
 
 export default GoogleSignIn;
-
-const styles = StyleSheet.create({});

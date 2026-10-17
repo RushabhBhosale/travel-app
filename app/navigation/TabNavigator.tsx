@@ -1,57 +1,48 @@
-import { StyleSheet, Text, View } from "react-native";
 import React from "react";
+import { Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import HomeStack from "./HomeStack";
 import { Ionicons } from "@expo/vector-icons";
-import GuideStack from "./GuideStack";
+import * as Haptics from "expo-haptics";
+import HomeScreen from "../screens/HomeScreen";
+import ExploreScreen from "../screens/ExploreScreen";
+import TripsScreen from "../screens/TripsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import { colors } from "../theme";
+import type { TabParams } from "./types";
 
-const TabNavigator = () => {
-  const Tab = createBottomTabNavigator();
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: "#FF5722",
-        tabBarInactiveTintColor: "#666",
-        tabBarStyle: { backgroundColor: "#fff", borderTopWidth: 0 },
-        tabBarIconStyle: {
-          marginBottom: -3,
-        },
-        tabBarLabelStyle: { fontSize: 12 },
-        headerShown: false,
-      }}
-    >
-      <Tab.Screen
-        name="Home"
-        component={HomeStack}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Guide"
-        component={GuideStack}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" color={color} size={size} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
-  );
+const Tab = createBottomTabNavigator<TabParams>();
+
+const ICONS: Record<keyof TabParams, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
+  Home: ["home", "home-outline"],
+  Explore: ["compass", "compass-outline"],
+  Trips: ["airplane", "airplane-outline"],
+  Profile: ["person-circle", "person-circle-outline"],
 };
 
-export default TabNavigator;
+const TabNavigator = () => (
+  <Tab.Navigator
+    screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarActiveTintColor: colors.brand,
+      tabBarInactiveTintColor: colors.subtle,
+      tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+      tabBarStyle: {
+        backgroundColor: "#fff",
+        borderTopColor: colors.border,
+        ...(Platform.OS === "android" ? { height: 64, paddingBottom: 8, paddingTop: 6 } : {}),
+      },
+      tabBarIcon: ({ focused, color, size }) => (
+        <Ionicons name={ICONS[route.name][focused ? 0 : 1]} size={size - 1} color={color} />
+      ),
+      freezeOnBlur: true,
+    })}
+    screenListeners={{ tabPress: () => Haptics.selectionAsync().catch(() => {}) }}
+  >
+    <Tab.Screen name="Home" component={HomeScreen} />
+    <Tab.Screen name="Explore" component={ExploreScreen} />
+    <Tab.Screen name="Trips" component={TripsScreen} options={{ title: "My Trips" }} />
+    <Tab.Screen name="Profile" component={ProfileScreen} />
+  </Tab.Navigator>
+);
 
-const styles = StyleSheet.create({});
+export default TabNavigator;

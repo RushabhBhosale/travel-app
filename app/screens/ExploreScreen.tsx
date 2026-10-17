@@ -1,169 +1,167 @@
-import {
-  Dimensions,
-  ImageBackground,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import Chip from "../components/ui/Chip";
+import EmptyState from "../components/ui/EmptyState";
+import DestinationCard from "../components/DestinationCard";
+import { CATEGORIES, Category, DESTINATIONS } from "../data/destinations";
+import { PlaceSuggestion, searchPlaces } from "../lib/places";
+import { colors, shadow } from "../theme";
+import type { RootNav, TabParams } from "../navigation/types";
 
-const places = [
-  {
-    id: "1",
-    name: "Mysore Palace",
-    image:
-      "https://www.worldatlas.com/r/w1200/upload/e5/0e/5f/shutterstock-122322643.jpg",
-    description:
-      "The iconic Mysore Palace, a masterpiece of Indo-Saracenic architecture, is a must-visit for its grandeur and vibrant history. Illuminated at night, it hosts the famous Dussehra festival.",
-    attributes: {
-      location: "Mysore, Karnataka",
-      type: "Heritage",
-      bestTime: "October - April",
-      attractions: ["Dussehra Festival", "Durbar Hall", "Royal Artifacts"],
-    },
-  },
-  {
-    id: "2",
-    name: "Coorg (Kodagu)",
-    image:
-      "https://static.toiimg.com/thumb/104040262/coorg.jpg?width=1200&height=900",
-    description:
-      "Known as the Scotland of India, Coorg is a misty hill station famous for its coffee plantations, lush greenery, and serene waterfalls.",
-    attributes: {
-      location: "Kodagu, Karnataka",
-      type: "Hill Station",
-      bestTime: "October - March",
-      attractions: [
-        "Abbey Falls",
-        "Raja’s Seat",
-        "Coffee Plantations",
-        "Trekking",
-      ],
-    },
-  },
-  {
-    id: "3",
-    name: "Hampi",
-    image:
-      "https://images.travelandleisureasia.com/wp-content/uploads/sites/2/2025/02/12133950/Hampi-places-to-visit-FI-1600x900.jpg",
-    description:
-      "A UNESCO World Heritage Site, Hampi is a historic village with ancient ruins of the Vijayanagara Empire, featuring stunning temples and boulders.",
-    attributes: {
-      location: "Ballari, Karnataka",
-      type: "Heritage",
-      bestTime: "October - February",
-      attractions: [
-        "Virupaksha Temple",
-        "Vijaya Vittala Temple",
-        "Rock Climbing",
-      ],
-    },
-  },
-  {
-    id: "4",
-    name: "Gokarna",
-    image:
-      "https://s7ap1.scene7.com/is/image/incredibleindia/om-beach-gokarna-karnataka-tri-hero?qlt=82&ts=1727164538227&wid=800",
-    description:
-      "A serene coastal town with pristine beaches and ancient temples, Gokarna is perfect for those seeking spirituality and relaxation.",
-    attributes: {
-      location: "Uttara Kannada, Karnataka",
-      type: "Beach / Pilgrimage",
-      bestTime: "October - March",
-      attractions: ["Om Beach", "Mahabaleshwar Temple", "Surfing"],
-    },
-  },
-];
+const ExploreScreen = () => {
+  const navigation = useNavigation<RootNav>();
+  const route = useRoute<RouteProp<TabParams, "Explore">>();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<Category | null>(route.params?.category ?? null);
+  const [remote, setRemote] = useState<PlaceSuggestion[]>([]);
+  const [searching, setSearching] = useState(false);
 
-const GuideScreen = () => {
-  const navigation = useNavigation();
-  return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View className="p-4 border-b border-gray-200">
-          <Text className="text-2xl font-bold text-gray-800">
-            Explore Karntaka
-          </Text>
-          <Text className="text-sm font-medium text-gray-700 mt-1">
-            Discover best places to visit in Karnataka
-          </Text>
-        </View>
+  useEffect(() => {
+    if (route.params?.category) setCategory(route.params.category);
+  }, [route.params?.category]);
 
-        {places.map((place, index) => (
-          <Pressable
-            onPress={() => navigation.navigate("GuideDetail", { place })}
-            style={styles.card}
-            key={index}
-            className="mx-4 mt-4 rounded-xl overflow-hidden shadow-sm"
-          >
-            <ImageBackground
-              className="w-full h-full"
-              source={{ uri: place.image }}
-              style={styles.image}
-            >
-              <View className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return DESTINATIONS.filter(
+      (d) =>
+        (!category || d.categories.includes(category)) &&
+        (!q || `${d.name} ${d.region} ${d.tagline} ${d.categories.join(" ")} ${d.attractions.join(" ")}`.toLowerCase().includes(q))
+    );
+  }, [query, category]);
 
-              <View className="p-4 flex-1 justify-end">
-                <Text className="text-black text-xl font-bold mb-2">
-                  {place.name}
-                </Text>
-                <Text className="text-black text-sm font-medium line-clamp-2">
-                  {place.description}
-                </Text>
-              </View>
-            </ImageBackground>
+  // Anything not in the curated guide can still be searched worldwide.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 3) {
+      setRemote([]);
+      return;
+    }
+    const controller = new AbortController();
+    setSearching(true);
+    const t = setTimeout(() => {
+      searchPlaces(q, controller.signal)
+        .then((r) => setRemote(r.slice(0, 4)))
+        .catch(() => {})
+        .finally(() => !controller.signal.aborted && setSearching(false));
+    }, 350);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [query]);
 
-            <View className="bg-white p-4">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="location-outline" size={16} color="#FF5722" />
-                <Text className="text-sm text-gray-800 font-medium ml-2">
-                  {place.attributes.location}
-                </Text>
-              </View>
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="map-outline" size={16} color="#FF5722" />
-                <Text className="text-sm text-gray-800 font-medium ml-2">
-                  {place.attributes.type}
-                </Text>
-              </View>
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="calendar-outline" size={16} color="#FF5722" />
-                <Text className="text-sm text-gray-800 font-medium ml-2">
-                  {place.attributes.bestTime}
-                </Text>
-              </View>
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="star-outline" size={16} color="#FF5722" />
-                <Text className="text-sm text-gray-800 font-medium ml-2">
-                  {place.attributes.attractions.join(", ")}
-                </Text>
-              </View>
-            </View>
+  const openRemote = (s: PlaceSuggestion) => {
+    if (!s.location) return navigation.navigate("NewTrip");
+    navigation.navigate("Destination", { place: { name: s.title, subtitle: s.subtitle, lat: s.location.lat, lng: s.location.lng } });
+  };
+
+  const header = (
+    <View>
+      <View className="px-5 pb-1 pt-2">
+        <Text className="text-[28px] font-bold tracking-tight text-slate-900">Explore</Text>
+        <Text className="mt-0.5 text-sm text-slate-500">Guides, weather and ideas for your next trip</Text>
+      </View>
+
+      <View className="mx-5 mt-4 h-12 flex-row items-center rounded-2xl bg-white px-4" style={shadow(1)}>
+        <Ionicons name="search" size={18} color={colors.muted} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search a city, country or landmark"
+          placeholderTextColor={colors.subtle}
+          autoCorrect={false}
+          returnKeyType="search"
+          style={{ flex: 1, marginLeft: 10, fontSize: 15, color: colors.ink, paddingVertical: 0 }}
+        />
+        {searching ? (
+          <ActivityIndicator size="small" color={colors.brand} />
+        ) : query ? (
+          <Pressable hitSlop={10} onPress={() => setQuery("")}>
+            <Ionicons name="close-circle" size={18} color={colors.subtle} />
           </Pressable>
+        ) : null}
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 14 }}>
+        <Chip label="All" selected={!category} onPress={() => setCategory(null)} className="mr-2" />
+        {CATEGORIES.map((c) => (
+          <Chip
+            key={c.label}
+            label={c.label}
+            icon={c.icon as any}
+            selected={category === c.label}
+            onPress={() => setCategory(category === c.label ? null : c.label)}
+            className="mr-2"
+          />
         ))}
       </ScrollView>
+
+      {remote.length > 0 && (
+        <View className="mx-5 mb-4 rounded-3xl bg-white p-2" style={shadow(1)}>
+          <Text className="px-2 pb-1 pt-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">Places worldwide</Text>
+          {remote.map((s) => (
+            <Pressable key={s.id} onPress={() => openRemote(s)} className="flex-row items-center rounded-2xl px-2 py-2.5 active:bg-slate-50">
+              <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-brand-50">
+                <Ionicons name="location" size={16} color={colors.brand} />
+              </View>
+              <View className="flex-1">
+                <Text numberOfLines={1} className="text-[15px] font-semibold text-slate-900">
+                  {s.title}
+                </Text>
+                {!!s.subtitle && (
+                  <Text numberOfLines={1} className="text-xs text-slate-500">
+                    {s.subtitle}
+                  </Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.subtle} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {results.length > 0 && (
+        <Text className="mb-3 px-5 text-xs font-bold uppercase tracking-wider text-slate-400">
+          {category ? `${category} · ` : ""}
+          {results.length} curated {results.length === 1 ? "guide" : "guides"}
+        </Text>
+      )}
+    </View>
+  );
+
+  return (
+    <SafeAreaView edges={["top"]} className="flex-1 bg-slate-50">
+      <FlatList
+        data={results}
+        keyExtractor={(d) => d.id}
+        ListHeaderComponent={header}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        initialNumToRender={4}
+        windowSize={7}
+        renderItem={({ item }) => (
+          <View className="px-5">
+            <DestinationCard size="list" destination={item} onPress={() => navigation.navigate("Destination", { id: item.id })} />
+          </View>
+        )}
+        ListEmptyComponent={
+          remote.length === 0 && !searching ? (
+            <EmptyState
+              icon="compass-outline"
+              title="No guides match yet"
+              subtitle="Try another search or start a trip anywhere in the world."
+              action={{ title: "Plan a custom trip", icon: "add", onPress: () => navigation.navigate("NewTrip") }}
+            />
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 };
 
-export default GuideScreen;
-
-const styles = StyleSheet.create({
-  image: {
-    height: "60%",
-  },
-
-  card: {
-    height: Dimensions.get("window").height * 0.5,
-    marginBottom: 16,
-  },
-});
+export default ExploreScreen;

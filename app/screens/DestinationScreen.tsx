@@ -1,193 +1,154 @@
-import {
-  ImageBackground,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
 import React from "react";
-import { RouteProp } from "@react-navigation/native";
+import { Linking, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { GuideStackParams } from "../navigation/GuideStack";
-import { SafeAreaView } from "react-native-safe-area-context";
+import AppImage from "../components/ui/AppImage";
+import Button from "../components/ui/Button";
+import IconButton from "../components/ui/IconButton";
+import Skeleton from "../components/ui/Skeleton";
+import WeatherStrip from "../components/WeatherStrip";
+import { destinationById } from "../data/destinations";
+import { useWikiSummary } from "../lib/wiki";
+import { mapsSearchUrl } from "../lib/places";
+import { colors, shadow } from "../theme";
+import type { ScreenProps } from "../navigation/types";
 
-type GuideDetailScreenRouteProp = RouteProp<GuideStackParams, "GuideDetail">;
+const Fact = ({ icon, label, value }: { icon: any; label: string; value: string }) => (
+  <View className="flex-1 items-center rounded-2xl bg-white px-2 py-3" style={shadow(1)}>
+    <Ionicons name={icon} size={18} color={colors.brand} />
+    <Text className="mt-1 text-[11px] font-medium text-slate-400">{label}</Text>
+    <Text numberOfLines={1} className="text-[13px] font-bold text-slate-900">
+      {value}
+    </Text>
+  </View>
+);
 
-type Props = {
-  route: GuideDetailScreenRouteProp;
-  navigation: any; // Fallback for back navigation
-};
+const DestinationScreen = ({ route, navigation }: ScreenProps<"Destination">) => {
+  const insets = useSafeAreaInsets();
+  const curated = destinationById(route.params.id);
+  const place = route.params.place;
+  const name = curated?.name ?? place?.name ?? "Destination";
+  const region = curated?.region ?? place?.subtitle ?? "";
+  const location = curated?.location ?? (place ? { lat: place.lat, lng: place.lng } : undefined);
 
-const itineraries: { [key: string]: string[] } = {
-  "Mysore Palace": [
-    "Day 1: Explore Durbar Hall and Royal Artifacts.",
-    "Day 2: Attend the Dussehra Festival (October) or evening light show.",
-    "Day 3: Visit nearby Chamundi Hills and Jaganmohan Palace.",
-  ],
-  "Coorg (Kodagu)": [
-    "Day 1: Visit Abbey Falls and hike through coffee plantations.",
-    "Day 2: Relax at Raja’s Seat and explore Talacauvery.",
-    "Day 3: Trek to Tadiandamol Peak or go river rafting.",
-  ],
-  Hampi: [
-    "Day 1: Tour Virupaksha Temple and Hampi Bazaar.",
-    "Day 2: Explore Vijaya Vittala Temple and boulder landscapes.",
-    "Day 3: Try rock climbing or visit nearby Anjaneya Hill.",
-  ],
-  Gokarna: [
-    "Day 1: Visit Mahabaleshwar Temple and Om Beach.",
-    "Day 2: Relax at Kudle Beach or try surfing.",
-    "Day 3: Explore Half Moon Beach and Paradise Beach.",
-  ],
-};
+  const { data: wiki, isLoading: wikiLoading } = useWikiSummary(curated?.wiki ?? place?.name);
+  const image = curated?.image ?? wiki?.image;
 
-const additionalAttributes: {
-  [key: string]: { entryFee: string; travelTips: string[] };
-} = {
-  "Mysore Palace": {
-    entryFee: "₹70 for adults, ₹30 for children",
-    travelTips: [
-      "Book tickets online to avoid queues.",
-      "Visit during Dussehra for the grand festival.",
-      "Photography inside requires a separate fee.",
-    ],
-  },
-  "Coorg (Kodagu)": {
-    entryFee: "Free for most attractions, some estates may charge ₹100-₹200",
-    travelTips: [
-      "Carry rain gear during monsoon (June-September).",
-      "Book homestays in advance for peak season.",
-      "Try local Kodava cuisine like Pandi Curry.",
-    ],
-  },
-  Hampi: {
-    entryFee: "₹40 for main monuments, free for open ruins",
-    travelTips: [
-      "Hire a local guide for historical insights.",
-      "Wear comfortable shoes for exploring ruins.",
-      "Visit in winter for cooler weather.",
-    ],
-  },
-  Gokarna: {
-    entryFee: "Free for beaches, temple entry free",
-    travelTips: [
-      "Respect temple dress codes (cover shoulders and knees).",
-      "Book beach shacks early during peak season.",
-      "Carry sunscreen for beach activities.",
-    ],
-  },
-};
+  const share = () =>
+    Share.share({
+      message: `${name}${region ? `, ${region}` : ""}\n${curated?.tagline ?? wiki?.extract?.slice(0, 160) ?? ""}${
+        curated ? `\nBest time to visit: ${curated.bestTime}` : ""
+      }`,
+    });
 
-const GuideDetailScreen = ({ route, navigation }: Props) => {
-  const { place } = route?.params;
-  const itinerary = itineraries[place.name] || [];
-  const extraAttrributes = additionalAttributes[place.name] || {
-    entries: "N/A",
-    travelTips: [],
-  };
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView>
-        <ImageBackground className="w-full h-80" source={{ uri: place.image }}>
-          <View className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent">
-            <TouchableOpacity className="absolute top-4 left-4 bg-white/80 rounded-full">
-              <Ionicons name="arrow-back" size={24} color="#FF5722" />
-            </TouchableOpacity>
+    <View className="flex-1 bg-slate-50">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
+        <AppImage source={image} scrim style={{ height: 380 }} priority="high" fallbackIcon="earth">
+          <View className="absolute left-0 right-0 flex-row justify-between px-4" style={{ top: insets.top + 6 }}>
+            <IconButton tone="glass" name="chevron-back" onPress={() => navigation.goBack()} accessibilityLabel="Go back" />
+            <IconButton tone="glass" name="share-outline" onPress={share} accessibilityLabel="Share" />
           </View>
-
-          <View className="p-4 flex-1 justify-end">
-            <Text className="text-white text-2xl font-bold">{place.name}</Text>
+          <View className="absolute bottom-0 left-0 right-0 px-5 pb-9">
+            {!!region && (
+              <View className="mb-1 flex-row items-center">
+                <Ionicons name="location" size={14} color="#FED7AA" />
+                <Text className="ml-1 text-sm font-medium text-orange-100">{region}</Text>
+              </View>
+            )}
+            <Text className="text-[34px] font-extrabold tracking-tight text-white">{name}</Text>
+            {!!curated?.tagline && <Text className="mt-1 text-[15px] text-slate-200">{curated.tagline}</Text>}
           </View>
-        </ImageBackground>
+        </AppImage>
 
-        <View className="p-4">
-          <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-2">
-              About
-            </Text>
-            <Text className="text-base font-medium text-gray-800">
-              {place.description}
-            </Text>
-          </View>
-
-          <View className="border-t border-gray-200 pt-4 mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-3">
-              Details
-            </Text>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="location-outline" size={24} color="#FF5722" />
-              <Text className="text-gray-800 ml-3 text-base font-medium">
-                Location: {place.attributes.location}
-              </Text>
-            </View>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="map-outline" size={24} color="#FF5722" />
-              <Text className="text-gray-800 ml-3 text-base font-medium">
-                Type: {place.attributes.type}
-              </Text>
-            </View>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="map-outline" size={24} color="#FF5722" />
-              <Text className="text-gray-800 ml-3 text-base font-medium">
-                Best time: {place.attributes.bestTime}
-              </Text>
-            </View>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="map-outline" size={24} color="#FF5722" />
-              <Text className="text-gray-800 ml-3 text-base font-medium">
-                Attractions: {place.attributes.attractions}
-              </Text>
-            </View>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="map-outline" size={24} color="#FF5722" />
-              <Text className="text-gray-800 ml-3 text-base font-medium">
-                Extras: {extraAttrributes.entryFee}
-              </Text>
-            </View>
-          </View>
-
-          {itinerary.length > 0 && (
-            <View className="border-t border-gray-200 pt-4 mb-6">
-              <Text className="text-lg text-gray-800 font-semibold mb-3">
-                Suggested Itinerary
-              </Text>
-              {itinerary.map((item, index) => (
-                <View className="flex-row items-start mb-2" key={index}>
-                  <Text className="text-gray-800 text-base font-medium mr-2">
-                    -
-                  </Text>
-                  <Text className="text-gray-800 text-base font-medium flex-1">
-                    {item}
-                  </Text>
-                </View>
-              ))}
+        <View className="-mt-5 rounded-t-[28px] bg-slate-50 px-5 pt-5">
+          {curated && (
+            <View className="mb-5 flex-row gap-3">
+              <Fact icon="calendar-outline" label="Best time" value={curated.bestTime} />
+              <Fact icon="time-outline" label="Ideal stay" value={curated.idealDays} />
+              <Fact icon="pricetags-outline" label="Vibe" value={curated.categories[0]} />
             </View>
           )}
 
-          {extraAttrributes.travelTips.length > 0 && (
-            <View className="border-t border-gray-200 pt-4 mb-6">
-              <Text className="text-lg text-gray-800 font-semibold mb-3">
-                Travel Tips
-              </Text>
-              {extraAttrributes.travelTips.map((item, index) => (
-                <View className="flex-row items-start mb-2" key={index}>
-                  <Text className="text-gray-800 text-base font-medium mr-2">
-                    -
-                  </Text>
-                  <Text className="text-gray-800 text-base font-medium flex-1">
-                    {item}
-                  </Text>
-                </View>
-              ))}
+          <Text className="mb-2 text-lg font-bold text-slate-900">About</Text>
+          {wikiLoading ? (
+            <View className="mb-5">
+              <Skeleton style={{ height: 14, marginBottom: 8 }} />
+              <Skeleton style={{ height: 14, marginBottom: 8, width: "92%" }} />
+              <Skeleton style={{ height: 14, width: "70%" }} />
             </View>
+          ) : (
+            <View className="mb-5">
+              <Text className="text-[15px] leading-6 text-slate-600">
+                {wiki?.extract || curated?.tagline || "No description available yet."}
+              </Text>
+              {!!wiki?.url && (
+                <Pressable onPress={() => Linking.openURL(wiki.url!)} className="mt-2 self-start" hitSlop={8}>
+                  <Text className="text-sm font-semibold text-brand">Read more on Wikipedia</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          <WeatherStrip location={location} title={`Weather in ${name}`} />
+
+          {curated && (
+            <>
+              <Text className="mb-3 text-lg font-bold text-slate-900">Top things to do</Text>
+              <View className="mb-5 rounded-3xl bg-white px-4 py-1" style={shadow(1)}>
+                {curated.attractions.map((a, i) => (
+                  <Pressable
+                    key={a}
+                    onPress={() => Linking.openURL(mapsSearchUrl(`${a}, ${curated.name}`))}
+                    className={`flex-row items-center py-3.5 active:opacity-60 ${i < curated.attractions.length - 1 ? "border-b border-slate-100" : ""}`}
+                  >
+                    <View className="mr-3 h-7 w-7 items-center justify-center rounded-full bg-brand-50">
+                      <Text className="text-xs font-bold text-brand-600">{i + 1}</Text>
+                    </View>
+                    <Text className="flex-1 text-[15px] font-medium text-slate-800">{a}</Text>
+                    <Ionicons name="open-outline" size={16} color={colors.subtle} />
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text className="mb-3 text-lg font-bold text-slate-900">Good to know</Text>
+              <View className="mb-5 rounded-3xl bg-amber-50 p-4">
+                {curated.tips.map((t) => (
+                  <View key={t} className="mb-2 flex-row">
+                    <Ionicons name="bulb-outline" size={16} color="#B45309" style={{ marginTop: 2 }} />
+                    <Text className="ml-2 flex-1 text-sm leading-5 text-amber-900">{t}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text className="text-[11px] text-slate-400">
+                Photo: {curated.credit.author}, {curated.credit.license}, via Wikimedia Commons
+              </Text>
+            </>
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      <View
+        className="absolute bottom-0 left-0 right-0 flex-row gap-3 border-t border-slate-100 bg-white px-5 pt-3"
+        style={{ paddingBottom: Math.max(insets.bottom, 14) }}
+      >
+        <Button
+          title="Ask AI"
+          icon="sparkles"
+          variant="secondary"
+          className="flex-1"
+          onPress={() => navigation.navigate("AIChat", { destination: curated ? `${curated.name}, ${curated.region}` : [name, region].filter(Boolean).join(", ") })}
+        />
+        <Button
+          title="Plan a trip here"
+          icon="airplane"
+          className="flex-[1.4]"
+          onPress={() => navigation.navigate("NewTrip", curated ? { destinationId: curated.id } : { place })}
+        />
+      </View>
+    </View>
   );
 };
 
-export default GuideDetailScreen;
-
-const styles = StyleSheet.create({});
+export default DestinationScreen;

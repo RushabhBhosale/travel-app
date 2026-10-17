@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
@@ -12,14 +12,18 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@clerk/clerk-sdk-node": "^5.1.6",
+    "@clerk/backend": "^2.33.7",
     "axios": "^1.11.0",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.23",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
-    "mongodb": "^6.17.0",
     "mongoose": "^8.16.4",
     "nodemailer": "^7.0.5",
     "nodemon": "^3.1.10"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
   }
 }
