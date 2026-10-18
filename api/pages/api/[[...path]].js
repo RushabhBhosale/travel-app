@@ -25,4 +25,6 @@ export default async function handler(req, res) {
 
 export const config = {
   api: { bodyParser: false },
+  // AI planning and suggestions can take well over the default function timeout.
+  maxDuration: 60,
 };

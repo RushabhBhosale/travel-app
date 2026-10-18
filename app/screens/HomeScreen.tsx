@@ -8,7 +8,6 @@ import { useUser } from "@clerk/clerk-expo";
 import AppImage from "../components/ui/AppImage";
 import Button from "../components/ui/Button";
 import SectionHeader from "../components/ui/SectionHeader";
-import Skeleton from "../components/ui/Skeleton";
 import TripCard from "../components/TripCard";
 import DestinationCard from "../components/DestinationCard";
 import { CATEGORIES, destinationById, inSeason } from "../data/destinations";
@@ -38,7 +37,7 @@ const QuickAction = ({ icon, label, color, bg, onPress }: { icon: any; label: st
 const HomeScreen = () => {
   const navigation = useNavigation<RootNav>();
   const { user } = useUser();
-  const { data: trips, isLoading, refetch, isRefetching } = useTrips();
+  const { data: trips, refetch, isRefetching } = useTrips();
 
   const nextTrip = useMemo(
     () => trips?.filter((t) => tripStatus(t).phase !== "past").sort((a, b) => a.startDate.localeCompare(b.startDate))[0],
@@ -83,9 +82,7 @@ const HomeScreen = () => {
         </Pressable>
 
         <View className="px-5">
-          {isLoading && !trips ? (
-            <Skeleton style={{ height: 220, borderRadius: 28 }} />
-          ) : nextTrip ? (
+          {nextTrip ? (
             <>
               <SectionHeader title={tripStatus(nextTrip).phase === "ongoing" ? "Happening now" : "Your next trip"} action="All trips" onAction={() => navigation.navigate("Tabs", { screen: "Trips" })} />
               <TripCard variant="hero" trip={nextTrip} onPress={() => navigation.navigate("Trip", { tripId: nextTrip._id })} />

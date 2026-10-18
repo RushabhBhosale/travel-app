@@ -93,4 +93,4 @@ const tripSchema = new mongoose.Schema(
 tripSchema.index({ host: 1 });
 tripSchema.index({ travelers: 1 });
 
-export default mongoose.model("Trip", tripSchema);
+export default mongoose.models.Trip || mongoose.model("Trip", tripSchema);

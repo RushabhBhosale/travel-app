@@ -26,11 +26,16 @@ const GoogleSignIn = ({ onError }: { onError: (message: string) => void }) => {
     setLoading(true);
     onError("");
     try {
-      const { createdSessionId, setActive } = await startSSOFlow({
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: "travelapp", path: "oauth-callback" });
+      const { createdSessionId, setActive, authSessionResult, signIn, signUp } = await startSSOFlow({
         strategy: "oauth_google",
-        redirectUrl: AuthSession.makeRedirectUri({ scheme: "travelapp" }),
+        redirectUrl,
       });
-      if (createdSessionId && setActive) await setActive({ session: createdSessionId });
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+      } else if (authSessionResult?.type === "success") {
+        onError("Google sign-in couldn't be completed. Please try again or use email.");
+      }
     } catch (err: any) {
       onError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || "Google sign-in failed. Please try again.");
     } finally {

@@ -10,8 +10,14 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       gcTime: 1000 * 60 * 60 * 24,
-      retry: 2,
-      retryDelay: (n) => Math.min(1500 * 2 ** n, 8000),
+      // Retry network/server errors; client errors won't fix themselves (401 once, for token races).
+      retry: (count, err: any) => {
+        const status = err?.response?.status;
+        if (status === 401) return count < 1;
+        if (status >= 400 && status < 500) return false;
+        return count < 2;
+      },
+      retryDelay: (n) => Math.min(800 * 2 ** n, 5000),
     },
   },
 });
