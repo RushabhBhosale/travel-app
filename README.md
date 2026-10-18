@@ -34,7 +34,7 @@ npm run dev
 ```
 
 The API runs on `http://localhost:3000` by default. Set the same variables in your host (Render → Environment) for production:
-`MONGO_URI`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, `CLERK_SECRET_KEY` (recommended: verifies sessions), optional `OPENROUTER_MODELS`.
+`MONGO_URI`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, optional `CLERK_SECRET_KEY` (sessions are verified with Clerk's public keys), optional `OPENROUTER_MODELS`.
 
 ## Data sources
 

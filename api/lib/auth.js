@@ -1,56 +1,52 @@
-import { createClerkClient, verifyToken } from "@clerk/backend";
+import { createClerkClient } from "@clerk/backend";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import User from "../models/user.js";
 
-// Tolerate quotes or whitespace pasted into the hosting dashboard.
-const secretKey = process.env.CLERK_SECRET_KEY?.trim().replace(/^["']|["']$/g, "") || undefined;
+const clean = (v) => v?.trim().replace(/^["']|["']$/g, "") || undefined;
+
+// The publishable key is public and encodes the Clerk Frontend API domain, whose
+// JWKS endpoint serves the keys that sign session tokens. Verifying against it
+// needs no secret. Defaults to the key the mobile app ships with.
+const publishableKey =
+  clean(process.env.CLERK_PUBLISHABLE_KEY) || "pk_test_cmVhZHktZ251LTIzLmNsZXJrLmFjY291bnRzLmRldiQ";
+const frontendApi = Buffer.from(publishableKey.split("_")[2] || "", "base64").toString().replace(/\$$/, "");
+const issuer = `https://${frontendApi}`;
+const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+
+// Optional: only used to look up a user's email/name from Clerk.
+const secretKey = clean(process.env.CLERK_SECRET_KEY);
 const clerk = secretKey ? createClerkClient({ secretKey }) : null;
 
-if (!secretKey) {
-  console.warn(
-    "[auth] CLERK_SECRET_KEY is not set: falling back to the unverified clerkUserId sent by the client. Set it in production."
-  );
-}
+// For local scripts only: accept an unverified x-clerk-user-id header.
+const allowDevAuth = process.env.ALLOW_DEV_AUTH === "1";
 
 /**
- * Resolves the signed-in Clerk user for the request.
- * With CLERK_SECRET_KEY set, the bearer token is verified and is the only
- * source of identity. Without it (local dev), the client-supplied id is used.
+ * Resolves the signed-in Clerk user from the bearer token, verifying its
+ * signature, issuer and expiry against the Clerk instance's public keys.
  */
 export async function requireAuth(req, res, next) {
   const header = req.get("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
 
-  if (secretKey) {
-    if (!token) return res.status(401).json({ error: "Not signed in" });
-    // verifyToken throws (rather than returning errors) for bad tokens and for a
-    // misconfigured CLERK_SECRET_KEY, so both paths must become a clean 401.
-    let result;
-    try {
-      result = await verifyToken(token, { secretKey });
-    } catch (err) {
-      result = { errors: [err] };
+  if (!token) {
+    const devId = allowDevAuth && (req.get("x-clerk-user-id") || req.query.clerkUserId);
+    if (devId) {
+      req.clerkUserId = String(devId);
+      return next();
     }
-    const { data, errors } = result;
-    if (errors?.length || !data?.sub) {
-      const reason = errors?.[0]?.reason || "invalid-token";
-      console.warn(`[auth] Token verification failed: ${reason}: ${errors?.[0]?.message || ""}`);
-      const misconfigured = reason === "secret-key-invalid" || reason === "jwk-failed-to-resolve";
-      return res.status(401).json({
-        error: misconfigured
-          ? "The server's sign-in configuration is invalid. Check CLERK_SECRET_KEY."
-          : "Session expired, please sign in again",
-        reason,
-      });
-    }
-    req.clerkUserId = data.sub;
-    return next();
+    return res.status(401).json({ error: "Not signed in" });
   }
 
-  const clerkUserId =
-    req.get("x-clerk-user-id") || req.query.clerkUserId || req.body?.clerkUserId;
-  if (!clerkUserId) return res.status(401).json({ error: "Not signed in" });
-  req.clerkUserId = String(clerkUserId);
-  next();
+  try {
+    const { payload } = await jwtVerify(token, jwks, { issuer, clockTolerance: 10 });
+    if (!payload.sub) throw new Error("Token has no subject");
+    req.clerkUserId = payload.sub;
+    return next();
+  } catch (err) {
+    const reason = err?.code || "invalid-token";
+    console.warn(`[auth] Token verification failed: ${reason}: ${err?.message || ""}`);
+    return res.status(401).json({ error: "Session expired, please sign in again", reason });
+  }
 }
 
 /** Creates or refreshes the local user record for the signed-in Clerk user. */
