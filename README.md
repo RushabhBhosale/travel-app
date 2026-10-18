@@ -1,6 +1,6 @@
 # Wayfare – travel planner
 
-Expo (React Native) app with an Express + MongoDB API.
+Expo (React Native) app with a Next.js API service backed by MongoDB.
 
 - **Trips:** day-by-day itinerary, saved places, notes, packing list and budget/expenses, all stored per trip
 - **AI:** chat assistant with trip context, one-tap itinerary planning, and place suggestions by interest (OpenRouter)
@@ -33,7 +33,7 @@ npm install
 npm run dev
 ```
 
-Set the same variables in your host (Render → Environment) for production:
+The API runs on `http://localhost:3000` by default. Set the same variables in your host (Render → Environment) for production:
 `MONGO_URI`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, `CLERK_SECRET_KEY` (recommended: verifies sessions), optional `OPENROUTER_MODELS`.
 
 ## Data sources

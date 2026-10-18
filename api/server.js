@@ -17,18 +17,19 @@ import {
 } from "./lib/places.js";
 import { AIError, complete, parseJson, rateLimit, travelSystemPrompt } from "./lib/ai.js";
 
-const port = process.env.PORT || 3000;
 const mongoUri = process.env.MONGO_URI;
 
 if (!mongoUri) {
-  console.error("MONGO_URI is not set. Copy api/.env.example to api/.env and fill it in.");
-  process.exit(1);
+  console.warn("MONGO_URI is not set. Copy api/.env.example to api/.env and fill it in.");
 }
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use((req, res, next) => {
+  // Next.js API requests use Node's IncomingMessage rather than Express' request.
+  // Add the small Express helper expected by auth middleware before forwarding.
+  req.get ||= (name) => req.headers[name.toLowerCase()];
   const start = Date.now();
   res.on("finish", () => console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`));
   next();
@@ -471,15 +472,19 @@ app.use((err, _req, res, _next) => {
     .json({ error: googleDown ? "Place lookup is unavailable right now" : "Something went wrong" });
 });
 
-mongoose
-  .connect(mongoUri)
-  .then(() => {
-    console.log("Connected to MongoDB");
-    app.listen(port, () => console.log(`API listening on port ${port}`));
-  })
-  .catch((err) => {
-    console.error("Error connecting to MongoDB", err);
-    process.exit(1);
-  });
+let connectionPromise;
+export async function connectDb() {
+  if (mongoose.connection.readyState === 1) return;
+  if (!mongoUri) throw new Error("MONGO_URI is not configured");
+  if (!connectionPromise || mongoose.connection.readyState !== 2) {
+    connectionPromise = mongoose.connect(mongoUri).then(() => {
+      console.log("Connected to MongoDB");
+    }).catch((err) => {
+      connectionPromise = null;
+      throw err;
+    });
+  }
+  return connectionPromise;
+}
 
 export default app;
