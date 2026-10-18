@@ -77,7 +77,7 @@ const TripScreen = ({ route, navigation }: ScreenProps<"Trip">) => {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => deleteTrip.mutate(tripId, { onSuccess: () => navigation.goBack() }),
+        onPress: () => deleteTrip.mutateAsync(tripId).then(() => navigation.goBack(), () => {}),
       },
     ]);
 
