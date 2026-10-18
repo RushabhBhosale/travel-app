@@ -21,7 +21,7 @@ npx expo run:ios               # or: npx expo run:android  (native rebuild neede
 | Variable | Purpose |
 | --- | --- |
 | `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk auth |
-| `EXPO_PUBLIC_API_URL` | API base URL, e.g. `https://api-delta-nine-60.vercel.app` or `http://<your-LAN-IP>:3000` |
+| `EXPO_PUBLIC_API_URL` | API base URL, e.g. `https://travel-app-nine-woad.vercel.app` or `http://<your-LAN-IP>:3000` |
 | `EXPO_PUBLIC_GOOGLE_API_KEY` | Optional. Google Places search; falls back to OpenStreetMap when unavailable |
 
 ## Run the API

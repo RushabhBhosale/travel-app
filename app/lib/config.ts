@@ -1,7 +1,7 @@
 export const APP_NAME = "Wayfare";
 
 export const API_URL = (
-  process.env.EXPO_PUBLIC_API_URL || "https://api-delta-nine-60.vercel.app"
+  process.env.EXPO_PUBLIC_API_URL || "https://travel-app-nine-woad.vercel.app"
 ).replace(/\/$/, "");
 
 export const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "";

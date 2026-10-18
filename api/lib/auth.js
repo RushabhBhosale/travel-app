@@ -21,9 +21,25 @@ export async function requireAuth(req, res, next) {
 
   if (secretKey) {
     if (!token) return res.status(401).json({ error: "Not signed in" });
-    const { data, errors } = await verifyToken(token, { secretKey });
-    if (errors || !data?.sub) {
-      return res.status(401).json({ error: "Session expired, please sign in again" });
+    // verifyToken throws (rather than returning errors) for bad tokens and for a
+    // misconfigured CLERK_SECRET_KEY, so both paths must become a clean 401.
+    let result;
+    try {
+      result = await verifyToken(token, { secretKey });
+    } catch (err) {
+      result = { errors: [err] };
+    }
+    const { data, errors } = result;
+    if (errors?.length || !data?.sub) {
+      const reason = errors?.[0]?.reason || "invalid-token";
+      console.warn(`[auth] Token verification failed: ${reason}: ${errors?.[0]?.message || ""}`);
+      const misconfigured = reason === "secret-key-invalid" || reason === "jwk-failed-to-resolve";
+      return res.status(401).json({
+        error: misconfigured
+          ? "The server's sign-in configuration is invalid. Check CLERK_SECRET_KEY."
+          : "Session expired, please sign in again",
+        reason,
+      });
     }
     req.clerkUserId = data.sub;
     return next();
