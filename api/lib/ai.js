@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_KEY = process.env.OPENROUTER_API_KEY;
+const API_KEY = process.env.OPENROUTER_API_KEY?.trim().replace(/^["']|["']$/g, "") || undefined;
 // Free OpenRouter models come and go; OpenRouter tries these in order.
 const MODELS = (
   process.env.OPENROUTER_MODELS ||

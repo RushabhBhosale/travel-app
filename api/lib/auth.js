@@ -1,7 +1,8 @@
 import { createClerkClient, verifyToken } from "@clerk/backend";
 import User from "../models/user.js";
 
-const secretKey = process.env.CLERK_SECRET_KEY;
+// Tolerate quotes or whitespace pasted into the hosting dashboard.
+const secretKey = process.env.CLERK_SECRET_KEY?.trim().replace(/^["']|["']$/g, "") || undefined;
 const clerk = secretKey ? createClerkClient({ secretKey }) : null;
 
 if (!secretKey) {
